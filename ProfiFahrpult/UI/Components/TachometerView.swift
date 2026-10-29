@@ -170,6 +170,8 @@ final class TachometerView: UIControl {
         let tickMid = r * 0.794
         let labelFont = Theme.font(r * 0.148, bold: true)
         let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: white]
+        // Bis hierhin dürfen die Zahlen reichen, damit sie nicht an die langen Striche stoßen
+        let labelLimit = tickMid - r * 0.115 / 2 - r * 0.03
         for i in 0...layout.ticks {
             let a = startAngle + sweep * CGFloat(i) / CGFloat(layout.ticks)
             let isEnd = i == 0 || i == layout.ticks
@@ -201,6 +203,24 @@ final class TachometerView: UIControl {
                     tp.y = c.y + r * 0.5
                 } else if tp.y < c.y {
                     tp.y -= r * 0.065 * abs(cos(a))
+                }
+                // Lange Zahlen (100, 120 …) so weit zur Mitte rücken, dass die äußerste Ecke frei bleibt
+                let hw = size.width / 2
+                let hh = labelFont.capHeight / 2
+                let dx = abs(tp.x - c.x)
+                let dy = abs(tp.y - c.y)
+                if hypot(dx + hw, dy + hh) > labelLimit {
+                    if isEnd {
+                        // in der Zeile der Geschwindigkeit bleiben, nur waagrecht einrücken
+                        let x = sqrt(max(0, labelLimit * labelLimit - (dy + hh) * (dy + hh))) - hw
+                        tp.x = c.x + (tp.x < c.x ? -x : x)
+                    } else {
+                        let qa = dx * dx + dy * dy
+                        let qb = dx * hw + dy * hh
+                        let qc = hw * hw + hh * hh - labelLimit * labelLimit
+                        let k = max(0, (-qb + sqrt(max(0, qb * qb - qa * qc))) / qa)
+                        tp = CGPoint(x: c.x + (tp.x - c.x) * k, y: c.y + (tp.y - c.y) * k)
+                    }
                 }
                 text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
             }
