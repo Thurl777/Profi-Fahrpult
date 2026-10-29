@@ -8,7 +8,7 @@ final class DriveViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = Theme.background
+        view.backgroundColor = Theme.bar
         for i in 0..<AppSettings.throttleCount {
             let t = ThrottleView(index: i)
             t.onSelectLoco = { [weak self] throttle, source in
