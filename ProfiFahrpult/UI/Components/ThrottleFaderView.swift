@@ -143,7 +143,8 @@ final class ThrottleFaderView: UIControl {
             if isLabeled {
                 let text = "\(s)" as NSString
                 let size = text.size(withAttributes: attrs)
-                let tx = toRight ? x0 + len + 3 : x0 - len - 3 - size.width
+                // dreistellige Fahrstufen dürfen nicht über den Rand hinausragen
+                let tx = min(max(0, toRight ? x0 + len + 3 : x0 - len - 3 - size.width), bounds.width - size.width)
                 text.draw(at: CGPoint(x: tx, y: ty - size.height / 2), withAttributes: attrs)
             }
             s += s + minor > maxStep && s < maxStep ? maxStep - s : minor

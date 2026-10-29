@@ -177,7 +177,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         // Tacho füllt den Platz der früheren − HALT + Zeile mit, der Schieberegler steht an der Außenseite
         let tachoTop = busyLabel.frame.maxY + 2
         let avail = max(80, separator.frame.minY - gap - tachoTop)
-        let faderW: CGFloat = fader.isHidden ? 0 : 64
+        // breit genug für dreistellige Fahrstufen an der Skala (100, 120)
+        let faderW: CGFloat = fader.isHidden ? 0 : 72
         let areaX = faderOnLeft ? pad + faderW : pad
         let areaW = w - 2 * pad - faderW
         // Etwas kleiner als der verfügbare Platz, damit rundherum Luft bleibt
