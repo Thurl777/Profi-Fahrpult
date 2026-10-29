@@ -20,7 +20,10 @@ final class TachometerView: UIControl {
         }
     }
 
+    /// km/h bei höchster Fahrstufe, solange keine Kennlinie gesetzt ist
     var maxSpeedKmh: Int = 120 { didSet { setNeedsDisplay() } }
+    /// Eingemessene Kennlinie der Lok. Zeiger und Anzeige folgen dann der Maßstabsgeschwindigkeit.
+    var speedCurve: SpeedCurve? { didSet { setNeedsDisplay() } }
     var forward: Bool = true { didSet { setNeedsDisplay() } }
     var emergencyStop: Bool = false { didSet { setNeedsDisplay() } }
     /// Schaltet das Instrument bei fehlender Lok/Verbindung grau
@@ -99,11 +102,21 @@ final class TachometerView: UIControl {
 
     // MARK: Zeichnen
 
-    private func scaleInterval() -> Int {
-        if maxSpeedKmh <= 60 { return 10 }
-        if maxSpeedKmh <= 160 { return 20 }
-        if maxSpeedKmh <= 400 { return 50 }
+    private func scaleInterval(_ scaleKmh: Double) -> Int {
+        if scaleKmh <= 60 { return 10 }
+        if scaleKmh <= 160 { return 20 }
+        if scaleKmh <= 400 { return 50 }
         return 100
+    }
+
+    /// Endwert der Skala und aktuelle Geschwindigkeit in km/h
+    private func speedValues() -> (scale: Double, current: Double) {
+        let stepFraction = maxStep > 0 ? Double(step) / Double(maxStep) : 0
+        if let curve = speedCurve, curve.hasMeasurements {
+            return (Double(curve.scaleMax), curve.kmh(atFraction: stepFraction))
+        }
+        let scale = Double(max(maxSpeedKmh, 1))
+        return (scale, scale * stepFraction)
     }
 
     private func point(at angle: CGFloat, radius r: CGFloat) -> CGPoint {
@@ -138,7 +151,9 @@ final class TachometerView: UIControl {
         }
         ctx.restoreGState()
 
-        let fraction = maxStep > 0 ? CGFloat(step) / CGFloat(maxStep) : 0
+        let speeds = speedValues()
+        let scaleKmh = speeds.scale
+        let fraction = CGFloat(max(0, min(1, speeds.current / scaleKmh)))
         let valueAngle = startAngle + sweep * fraction
         let activeColor = isActive ? (emergencyStop ? Theme.red : Theme.accent) : Theme.textDark
 
@@ -164,16 +179,26 @@ final class TachometerView: UIControl {
         }
 
         // Teilstriche und Zahlen
-        let interval = scaleInterval()
-        let maxKmh = max(maxSpeedKmh, 1)
+        let interval = scaleInterval(scaleKmh)
         let fontSize = max(9, r * 0.09)
         let attrs: [NSAttributedString.Key: Any] = [.font: Theme.font(fontSize, bold: true),
                                                     .foregroundColor: Theme.textDim]
-        let halfInterval = Double(interval) / 2
+        var values: [Double] = []
         var v = 0.0
-        while v <= Double(maxKmh) + 0.001 {
-            let a = startAngle + sweep * CGFloat(v / Double(maxKmh))
-            let isMajor = Int(v) % interval == 0
+        while v <= scaleKmh + 0.001 {
+            values.append(v)
+            v += Double(interval) / 2
+        }
+        if let last = values.last, last < scaleKmh - 0.001 {
+            values.append(scaleKmh)
+        }
+        // Der Endwert wird immer beschriftet; liegt er dicht am letzten Hauptstrich, entfällt dessen Zahl
+        let lastMajor = values.last(where: { Int($0) % interval == 0 && $0 < scaleKmh - 0.001 }) ?? 0
+        let skipLabel = scaleKmh - lastMajor < Double(interval) * 0.45 ? lastMajor : -1
+        for mark in values {
+            let a = startAngle + sweep * CGFloat(mark / scaleKmh)
+            let isEnd = abs(mark - scaleKmh) < 0.001
+            let isMajor = Int(mark) % interval == 0 || isEnd
             let outer = arcR - arcWidth / 2 - 3
             let inner = outer - (isMajor ? r * 0.08 : r * 0.04)
             let tick = UIBezierPath()
@@ -182,17 +207,16 @@ final class TachometerView: UIControl {
             tick.lineWidth = isMajor ? 2 : 1
             (isMajor ? UIColor.white : Theme.textDim).setStroke()
             tick.stroke()
-            if isMajor {
-                let text = "\(Int(v))" as NSString
+            if isMajor && mark != skipLabel {
+                let text = "\(Int(mark.rounded()))" as NSString
                 let size = text.size(withAttributes: attrs)
                 let tp = point(at: a, radius: inner - fontSize * 1.1)
                 text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: attrs)
             }
-            v += halfInterval
         }
 
         // Digitalanzeige
-        let kmh = Int((Double(maxKmh) * Double(fraction)).rounded())
+        let kmh = Int(speeds.current.rounded())
         let bigAttrs: [NSAttributedString.Key: Any] = [.font: Theme.monoFont(r * 0.24, bold: true),
                                                        .foregroundColor: isActive ? UIColor.white : Theme.textDark]
         let big = "\(kmh)" as NSString

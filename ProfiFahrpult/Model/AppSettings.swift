@@ -24,6 +24,8 @@ final class AppSettings {
         static let throttlePrefix = "ui.throttle."
         static let accessoryPage = "ui.accessoryPage"
         static let autoConnect = "z21.autoConnect"
+        static let modelScale = "measure.scale"
+        static let measureDistance = "measure.distanceCm"
     }
 
     private init() {
@@ -35,7 +37,9 @@ final class AppSettings {
             Key.turnoutTime: 150,
             Key.directionStops: true,
             Key.accessoryPage: 0,
-            Key.autoConnect: true
+            Key.autoConnect: true,
+            Key.modelScale: ModelScale.h0.rawValue,
+            Key.measureDistance: 100.0
         ])
     }
 
@@ -82,6 +86,21 @@ final class AppSettings {
     var accessoryPage: Int {
         get { return defaults.integer(forKey: Key.accessoryPage) }
         set { defaults.set(newValue, forKey: Key.accessoryPage) }
+    }
+
+    /// Maßstab der Anlage für die Einmess-Hilfe
+    var modelScale: ModelScale {
+        get { return ModelScale(rawValue: defaults.string(forKey: Key.modelScale) ?? "") ?? .h0 }
+        set { defaults.set(newValue.rawValue, forKey: Key.modelScale) }
+    }
+
+    /// Länge der Messstrecke in cm
+    var measureDistanceCm: Double {
+        get {
+            let d = defaults.double(forKey: Key.measureDistance)
+            return d > 0 ? d : 100
+        }
+        set { defaults.set(newValue, forKey: Key.measureDistance) }
     }
 
     func throttleLocoID(_ throttle: Int) -> String? {

@@ -13,7 +13,7 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 | Bereich | Inhalt |
 |---|---|
 | **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung), ±1-Fahrstufe, Richtung, HALT (lange drücken = Nothalt der Lok), Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“ |
-| **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Höchstgeschwindigkeit für die Tachoskala, Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
+| **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Geschwindigkeitsanzeige (km/h bei höchster Fahrstufe oder eingemessene Messpunkte), Einmess-Hilfe mit Stoppuhr, Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
 | **Stellpult** | 16 Magnetartikel pro Seite, Adressen 1–2048, rote/grüne Taste, Weichen links/rechts, Signale, Entkuppler, Licht; Rückmeldung der Stellung; Name und Rot/Grün-Tausch per langem Drücken |
 | **Melder** | R-Bus-Rückmelder, Module 1–20 mit je 8 Eingängen, Live-Anzeige |
 | **Prog.** | CV lesen/schreiben auf dem Programmiergleis, POM (Hauptgleis) schreiben/lesen, Bit-Ansicht, Lokadresse lesen/schreiben (kurz und lang, inkl. CV29) |
@@ -21,6 +21,26 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 
 Oben stehen immer Verbindungsstatus, Gleisstatus (Gleisspannung ein/aus, Nothalt, Kurzschluss,
 Programmiermodus) sowie STOP und GO.
+
+## Loks einmessen
+
+Der Tacho zeigt die Maßstabsgeschwindigkeit der Lok. Unter *Loks → Bearbeiten → Geschwindigkeitsanzeige*
+gibt es zwei Wege:
+
+- **km/h bei höchster Fahrstufe:** Ein Wert, z. B. 70. Dazwischen wird gleichmäßig gerechnet
+  (Fahrstufe 63 von 126 = 35 km/h). Die Tachoskala geht dann bis 70.
+- **Messpunkte:** Beliebig viele Paare „Fahrstufe → km/h“. Zwischen den Punkten wird gerechnet,
+  über dem höchsten Punkt mit der Steigung der letzten Strecke weiter. Die Grafik zeigt die Kennlinie.
+
+Die **Einmess-Hilfe** (*Messpunkte und Einmessen → Einmessen mit Stoppuhr*):
+
+1. Maßstab wählen (Z, N, TT, H0, S, 0, 1, G) und die Länge der Messstrecke in cm eingeben.
+2. Fahrstufe einstellen und „Lok fahren“ tippen (oder die Lok mit einem anderen Regler fahren).
+3. Beim Überfahren der ersten Marke START, bei der zweiten ZIEL tippen. Mehrere Läufe, z. B. hin
+   und zurück, werden gemittelt.
+4. „Als Messpunkt übernehmen“ – fertig. Für eine gute Kennlinie 4–6 Fahrstufen über den Bereich verteilt messen.
+
+Rechnung: km/h = Strecke (m) ÷ Zeit (s) × 3,6 × Maßstab. Beispiel H0: 1 m in 4,5 s = 69,6 km/h.
 
 ## Kompatibilität
 
@@ -73,13 +93,14 @@ R-Bus-Melder zufällig wechseln.
 ProfiFahrpult/
   App/          AppDelegate, Info.plist, Startbildschirm
   Z21/          Z21-LAN-Protokoll (Codec), UDP-Socket, Z21Client (Verbindung + Zustand)
+  Core/         Rechenlogik ohne UIKit (Geschwindigkeitskennlinie, Maßstäbe)
   Model/        Lok, Lokliste, Magnetartikel, Einstellungen (JSON/UserDefaults)
   UI/           ECoS-Design (Theme), Tacho, Funktionssymbole, alle Bildschirme
-Tests/          Unit-Tests für das Protokoll + Integrationstest gegen den Simulator
+Tests/          Unit-Tests für Protokoll und Kennlinie + Integrationstest gegen den Simulator
 tools/          z21_simulator.py
 ```
 
-Die Protokollschicht (`ProfiFahrpult/Z21`) hat keine UIKit-Abhängigkeit und kann mit
+Die Protokollschicht (`ProfiFahrpult/Z21`) und die Rechenlogik (`ProfiFahrpult/Core`) haben keine UIKit-Abhängigkeit und kann mit
 `swift test` geprüft werden (macOS oder Linux):
 
 ```bash

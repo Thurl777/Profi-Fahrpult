@@ -185,6 +185,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         locoImage.isDimmed = !active
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120
         tacho.maxStep = (loco?.speedSteps ?? .steps128).maxStep
+        tacho.speedCurve = loco?.speedCurve
         tacho.isActive = active
         tacho.isEnabled = active
         [reverseButton, forwardButton, minusButton, plusButton, haltButton].forEach { $0.isEnabled = active }
