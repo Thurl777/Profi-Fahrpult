@@ -241,6 +241,10 @@ class ECoSButton: UIButton {
         CATransaction.setDisableActions(true)
         gradient.frame = bounds
         CATransaction.commit()
+        // UIButton legt das imageView erst bei setImage ganz unten an – sonst verdeckt der Verlauf das Symbol
+        if let iv = imageView {
+            bringSubviewToFront(iv)
+        }
     }
 
     private func updateColors() {

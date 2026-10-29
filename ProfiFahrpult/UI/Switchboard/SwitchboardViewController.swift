@@ -74,6 +74,8 @@ final class SwitchboardViewController: UIViewController, Z21ClientObserver {
         let pad: CGFloat = 8
         let w = view.bounds.width
         header.frame = CGRect(x: pad, y: pad, width: w - 2 * pad, height: 60)
+        // Sonst ist contentView beim ersten Durchlauf noch 0 breit und die Seitenanzeige landet unter den Pfeiltasten
+        header.layoutIfNeeded()
         let hw = header.contentView.bounds.width
         prevButton.frame = CGRect(x: 8, y: 8, width: 70, height: 44)
         nextButton.frame = CGRect(x: 86, y: 8, width: 70, height: 44)
