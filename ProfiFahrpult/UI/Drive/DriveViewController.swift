@@ -4,6 +4,7 @@ import UIKit
 final class DriveViewController: UIViewController {
 
     private var throttles: [ThrottleView] = []
+    private let follower = HandheldFollower(throttleCount: AppSettings.throttleCount)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -12,6 +13,12 @@ final class DriveViewController: UIViewController {
             let t = ThrottleView(index: i)
             t.onSelectLoco = { [weak self] throttle, source in
                 self?.showPicker(for: throttle, from: source)
+            }
+            t.onSwap = {
+                AppSettings.shared.swapThrottleLocos()
+            }
+            t.onUserActivity = { [weak self] throttle in
+                self?.follower.noteAppUse(throttle: throttle.index)
             }
             view.addSubview(t)
             throttles.append(t)

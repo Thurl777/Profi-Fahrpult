@@ -22,6 +22,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
         let settings = AppSettings.shared
         Z21Client.shared.turnoutSwitchTime = settings.turnoutSwitchTime
+        Z21Client.shared.receiveAllLocoInfo = settings.followHandhelds
         application.isIdleTimerDisabled = settings.keepScreenOn
         if settings.autoConnect {
             Z21Client.shared.connect(host: settings.host, port: settings.port)

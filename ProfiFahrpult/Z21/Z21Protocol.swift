@@ -42,6 +42,9 @@ public enum Z21 {
         public static let railComSubscribed = BroadcastFlags(rawValue: 0x0000_0004)
         /// Systemzustand (Ströme, Spannung, Temperatur)
         public static let systemState = BroadcastFlags(rawValue: 0x0000_0100)
+        /// Lok-Infos aller geänderten Loks, auch nicht abonnierter (z.B. von einer Multimaus gefahren).
+        /// Nur zusammen mit `drivingAndSwitching`, erzeugt mehr Netzlast (ab Z21-Firmware 1.20).
+        public static let allLocoInfo = BroadcastFlags(rawValue: 0x0001_0000)
     }
 
     /// Bits von CentralState aus LAN_SYSTEMSTATE_DATACHANGED bzw. LAN_X_STATUS_CHANGED

@@ -12,7 +12,7 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 
 | Bereich | Inhalt |
 |---|---|
-| **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung), ±1-Fahrstufe, Richtung, HALT (lange drücken = Nothalt der Lok), Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“ |
+| **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung), ±1-Fahrstufe, Richtung, HALT (lange drücken = Nothalt der Lok), Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“, Kopplung mit zwei Multimäusen (siehe unten) |
 | **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Geschwindigkeitsanzeige (km/h bei höchster Fahrstufe oder eingemessene Messpunkte), Einmess-Hilfe mit Stoppuhr, Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
 | **Stellpult** | 16 Magnetartikel pro Seite, Adressen 1–2048, rote/grüne Taste, Weichen links/rechts, Signale, Entkuppler, Licht; Rückmeldung der Stellung; Name und Rot/Grün-Tausch per langem Drücken |
 | **Melder** | R-Bus-Rückmelder, Module 1–20 mit je 8 Eingängen, Live-Anzeige |
@@ -41,6 +41,38 @@ Die **Einmess-Hilfe** (*Messpunkte und Einmessen → Einmessen mit Stoppuhr*):
 4. „Als Messpunkt übernehmen“ – fertig. Für eine gute Kennlinie 4–6 Fahrstufen über den Bereich verteilt messen.
 
 Rechnung: km/h = Strecke (m) ÷ Zeit (s) × 3,6 × Maßstab. Beispiel H0: 1 m in 4,5 s = 69,6 km/h.
+
+## Mit zwei Multimäusen fahren (wie an der ECoS)
+
+Das iPad liegt in der Mitte, links und rechts je eine Roco Multimaus an der Z21.
+Regler 1 und Regler 2 der App zeigen, was an den Mäusen passiert:
+
+- **Tempo, Richtung, Funktionen:** Ändert man sie an der Multimaus, bewegt sich der Tacho
+  und die Funktionstasten leuchten in der App mit. Unter dem Loknamen steht kurz „Handregler aktiv“.
+  Umgekehrt sieht die Multimaus Änderungen aus der App.
+- **Lokwechsel:** Wählt man an einer Multimaus eine andere Lok und **fährt sie an oder schaltet eine
+  Funktion**, übernimmt die App die Lok auf den Regler, der am längsten nicht benutzt wurde – in der
+  Regel der Regler, dessen alte Lok an dieser Maus nicht mehr bedient wird. Loks, die noch nicht in
+  der Lokliste stehen, werden als „Lok *Adresse*“ angelegt.
+- **⇄** im Kopf eines Reglers tauscht die beiden Regler, falls die Zuordnung einmal nicht passt.
+  Danach bleibt sie, solange man an jeder Maus seine Lok fährt.
+- Ein Regler, der gerade in der App bedient wird, wird nicht ersetzt.
+- Ein-/Ausschalten unter *System → Einstellungen → Lokwechsel an Multimaus folgen*.
+
+Grenzen der Z21: Die Zentrale meldet nur, *welche* Lok bedient wurde, nicht an *welcher* Maus.
+Das bloße Auswählen einer Lok an der Multimaus meldet sie gar nicht – die App bemerkt den Wechsel
+erst beim ersten Drehen am Fahrregler oder Tastendruck. Die App nutzt dafür das Broadcast-Flag
+`0x00010000` (Lok-Infos aller Loks, ab Z21-Firmware 1.20).
+
+Ohne echte Multimaus lässt sich das mit dem Simulator testen:
+
+```bash
+python3 tools/multimaus.py 23 fahre 40
+```
+
+```bash
+python3 tools/multimaus.py 23 f 0 an
+```
 
 ## Kompatibilität
 
@@ -85,7 +117,7 @@ python3 tools/z21_simulator.py
 
 In der App unter *System* die IP des Macs eintragen (im iOS-Simulator auf demselben Mac: `127.0.0.1`).
 Der Simulator kennt Gleisspannung, Nothalt, Loks, Funktionen, Weichen, CVs und lässt
-R-Bus-Melder zufällig wechseln.
+R-Bus-Melder zufällig wechseln. `tools/multimaus.py` spielt einen Handregler (siehe oben).
 
 ## Aufbau des Codes
 
@@ -93,11 +125,11 @@ R-Bus-Melder zufällig wechseln.
 ProfiFahrpult/
   App/          AppDelegate, Info.plist, Startbildschirm
   Z21/          Z21-LAN-Protokoll (Codec), UDP-Socket, Z21Client (Verbindung + Zustand)
-  Core/         Rechenlogik ohne UIKit (Geschwindigkeitskennlinie, Maßstäbe)
+  Core/         Rechenlogik ohne UIKit (Geschwindigkeitskennlinie, Maßstäbe, Multimaus-Zuordnung)
   Model/        Lok, Lokliste, Magnetartikel, Einstellungen (JSON/UserDefaults)
   UI/           ECoS-Design (Theme), Tacho, Funktionssymbole, alle Bildschirme
 Tests/          Unit-Tests für Protokoll und Kennlinie + Integrationstest gegen den Simulator
-tools/          z21_simulator.py
+tools/          z21_simulator.py, multimaus.py
 ```
 
 Die Protokollschicht (`ProfiFahrpult/Z21`) und die Rechenlogik (`ProfiFahrpult/Core`) haben keine UIKit-Abhängigkeit und kann mit

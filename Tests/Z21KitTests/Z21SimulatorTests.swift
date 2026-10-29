@@ -9,6 +9,7 @@ final class Z21SimulatorTests: XCTestCase, Z21ClientObserver {
 
     private var client: Z21Client!
     private var locoUpdates: [LocoInfo] = []
+    private var externalUpdates: [LocoInfo] = []
 
     private func wait(_ timeout: TimeInterval, until condition: () -> Bool) -> Bool {
         let end = Date().addingTimeInterval(timeout)
@@ -21,6 +22,10 @@ final class Z21SimulatorTests: XCTestCase, Z21ClientObserver {
 
     func z21Client(_ client: Z21Client, locoChanged info: LocoInfo) {
         locoUpdates.append(info)
+    }
+
+    func z21Client(_ client: Z21Client, externalLocoActivity info: LocoInfo) {
+        if client === self.client { externalUpdates.append(info) }
     }
 
     func testRoundTripWithSimulator() throws {
@@ -70,5 +75,37 @@ final class Z21SimulatorTests: XCTestCase, Z21ClientObserver {
         XCTAssertTrue(wait(3) { client.trackStatus == .emergencyStop })
         client.disconnect()
         XCTAssertEqual(client.connectionState, .disconnected)
+    }
+
+    /// Zweiter Client fährt eine Lok wie eine Multimaus; der erste bekommt sie ohne Abo gemeldet.
+    func testHandheldActivityWithSimulator() throws {
+        guard let host = ProcessInfo.processInfo.environment["Z21_HOST"] else {
+            throw XCTSkip("Z21_HOST nicht gesetzt")
+        }
+        client = Z21Client()
+        client.receiveAllLocoInfo = true
+        client.addObserver(self)
+        client.connect(host: host)
+        let handheld = Z21Client()
+        handheld.connect(host: host)
+        XCTAssertTrue(wait(5) { client.connectionState == .connected && handheld.connectionState == .connected })
+        client.setTrackPower(true)
+        // direkt nach dem Verbinden werden Meldungen anderer Geräte bewusst ignoriert
+        _ = wait(2.5) { false }
+
+        externalUpdates.removeAll()
+        let address = UInt16(70 + Int.random(in: 0..<50))
+        handheld.setLocoDrive(address: address, speedSteps: .steps128, step: 30, forward: true)
+        XCTAssertTrue(wait(3) { externalUpdates.contains { $0.address == address && $0.step == 30 } })
+        XCTAssertNotNil(client.lastExternalActivity[address])
+
+        // Eigene Befehle zählen nicht als Fremdbedienung
+        externalUpdates.removeAll()
+        client.setLocoDrive(address: address, speedSteps: .steps128, step: 0, forward: true)
+        _ = wait(1) { false }
+        XCTAssertTrue(externalUpdates.isEmpty)
+
+        handheld.disconnect()
+        client.disconnect()
     }
 }
