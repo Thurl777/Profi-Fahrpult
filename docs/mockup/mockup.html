@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Profi-Fahrpult Mockup</title>
+<!-- Mockup des ECoS-Designs. Maße und Farben sind aus dem Swift-Code übernommen
+     (MainViewController, ThrottleView, TachometerView, SwitchboardViewController, Theme). -->
+<style>
+  body { margin: 0; background: #2a2a2a; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #fff; }
+  .screen { position: relative; overflow: hidden; background: #08090B; margin: 24px auto; box-shadow: 0 0 0 14px #111, 0 0 0 15px #444; border-radius: 4px; }
+  .abs { position: absolute; box-sizing: border-box; }
+  .lbl { position: absolute; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
+  .caption { text-align: center; color: #ccc; font-size: 15px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="caption">Querformat (iPad 1180 × 820): Fahrregler links und rechts, Menü und Stellpult in der Mitte</div>
+<div id="land" class="screen" style="width:1180px;height:820px"></div>
+<div class="caption">Hochformat (820 × 1180): Seite „Fahren“ mit beiden Fahrreglern</div>
+<div id="port" class="screen" style="width:820px;height:1180px"></div>
+<script>
+const T = {
+  background:'#08090B', panelTop:'#3A3E44', panelBottom:'#25282C', panelBorder:'#55595F', inset:'#0B0C0E',
+  titleTop:'#3A72BF', titleBottom:'#1D4583', menuTop:'#30343A', menuBottom:'#17191C',
+  buttonTop:'#62666D', buttonBottom:'#383B40', accent:'#3D8BFF', functionOn:'#FFC21A',
+  red:'#D9261C', redDark:'#8A1009', green:'#2DB843', greenDark:'#146B22',
+  text:'#FFFFFF', textDim:'#A4A9B0', textDark:'#6E737A'
+};
+function scale(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.min(255, Math.round(v * f)));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function el(parent, x, y, w, h, css = {}) {
+  const d = document.createElement('div');
+  d.className = 'abs';
+  Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }, css);
+  parent.appendChild(d);
+  return d;
+}
+function grad(parent, x, y, w, h, top, bottom, radius = 6, border = T.panelBorder) {
+  return el(parent, x, y, w, h, { background: `linear-gradient(${top}, ${bottom})`, borderRadius: radius + 'px',
+    border: border ? `1px solid ${border}` : 'none', overflow: 'hidden' });
+}
+function label(parent, x, y, w, h, text, size, opts = {}) {
+  const d = el(parent, x, y, w, h, {});
+  d.className = 'lbl';
+  Object.assign(d.style, { fontSize: size + 'px', fontWeight: opts.bold ? '700' : '400', color: opts.color || T.text,
+    justifyContent: opts.align === 'center' ? 'center' : (opts.align === 'right' ? 'flex-end' : 'flex-start'),
+    fontVariantNumeric: 'tabular-nums' });
+  d.textContent = text;
+  return d;
+}
+// ECoSButton
+function button(parent, x, y, w, h, title, o = {}) {
+  let top = T.buttonTop, bottom = T.buttonBottom;
+  if (o.style === 'red') { top = T.red; bottom = T.redDark; }
+  if (o.style === 'green') { top = T.green; bottom = T.greenDark; }
+  if (o.style === 'accent') { top = T.titleTop; bottom = T.titleBottom; }
+  const onColor = o.onColor || T.functionOn;
+  if (o.on) { top = onColor; bottom = scale(onColor, 0.6); }
+  let border = `1px solid ${o.on ? scale(onColor, 1.2) : T.panelBorder}`;
+  if (o.mark) border = `3px solid ${o.mark}`;
+  const b = el(parent, x, y, w, h, { background: `linear-gradient(${top}, ${bottom})`, borderRadius: '6px', border, overflow: 'hidden' });
+  if (title) label(b, 0, 0, w - 2, h - 2, title, o.size || 15, { bold: true, align: 'center',
+    color: o.on && !o.style ? '#000' : '#fff' });
+  return b;
+}
+function panel(parent, x, y, w, h, title, titleSize = 14) {
+  const p = grad(parent, x, y, w, h, T.panelTop, T.panelBottom, 6);
+  if (title) {
+    const tb = el(p, -1, -1, w, 30, { background: `linear-gradient(${T.titleTop}, ${T.titleBottom})` });
+    label(tb, 10, 0, w - 20, 30, title, titleSize, { bold: true });
+  }
+  p.content = el(p, -1, title ? 29 : -1, w, h - (title ? 30 : 0), {});
+  return p;
+}
+function svg(parent, x, y, w, h, body) {
+  const d = el(parent, x, y, w, h, {});
+  d.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+  return d;
+}
+function led(parent, x, y, d, color) {
+  el(parent, x, y, d, d, { borderRadius: '50%', background: `radial-gradient(circle at 50% 30%, ${scale(color, 1.4)}, ${color} 60%)`, border: '1px solid rgba(0,0,0,.6)' });
+}
+
+// Menüsymbole (wie MenuTabButton.draw)
+function menuIcon(kind, s, c) {
+  const L = (pts, w = 0.09) => `<polyline points="${pts.map(p => p[0] * s + ',' + p[1] * s).join(' ')}" fill="none" stroke="${c}" stroke-width="${w * s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const R = (x, y, w, h, r = 0) => `<rect x="${x * s}" y="${y * s}" width="${w * s}" height="${h * s}" rx="${r * s}" fill="${c}"/>`;
+  const O = (x, y, w) => `<circle cx="${(x + w / 2) * s}" cy="${(y + w / 2) * s}" r="${w / 2 * s}" fill="${c}"/>`;
+  switch (kind) {
+    case 'drive': {
+      const cx = 0.5 * s, cy = 0.58 * s, r = 0.4 * s, a0 = Math.PI * 0.85, a1 = Math.PI * 2.15;
+      return `<path d="M${cx + r * Math.cos(a0)},${cy + r * Math.sin(a0)} A${r},${r} 0 1 1 ${cx + r * Math.cos(a1)},${cy + r * Math.sin(a1)}" fill="none" stroke="${c}" stroke-width="${0.09 * s}" stroke-linecap="round"/>` + L([[0.5, 0.58], [0.72, 0.32]]) + O(0.42, 0.5, 0.16);
+    }
+    case 'switchboard': return L([[0.08, 0.7], [0.92, 0.7]]) + L([[0.32, 0.7], [0.6, 0.42], [0.92, 0.3]]);
+    case 'locos': return R(0.06, 0.38, 0.62, 0.3, 0.04) + R(0.6, 0.2, 0.32, 0.48, 0.05) + [0.2, 0.42, 0.74].map(x => O(x - 0.08, 0.68, 0.16)).join('');
+    case 'feedback': return L([[0.06, 0.78], [0.94, 0.78]]) + [0.18, 0.5, 0.82].map(x => L([[x, 0.68], [x, 0.88]], 0.06)).join('') + O(0.32, 0.12, 0.36);
+    case 'program': {
+      let out = `<rect x="${0.24 * s}" y="${0.24 * s}" width="${0.52 * s}" height="${0.52 * s}" rx="${0.05 * s}" fill="none" stroke="${c}" stroke-width="${0.08 * s}"/>`;
+      for (const t of [0.36, 0.5, 0.64]) out += L([[t, 0.06], [t, 0.22]], 0.06) + L([[t, 0.78], [t, 0.94]], 0.06) + L([[0.06, t], [0.22, t]], 0.06) + L([[0.78, t], [0.94, t]], 0.06);
+      return out;
+    }
+    case 'system': return [0.3, 0.68, 0.45].map((k, i) => { const y = 0.22 + i * 0.28; return L([[0.08, y], [0.92, y]], 0.07) + O(k - 0.1, y - 0.1, 0.2); }).join('');
+  }
+}
+function menuTab(parent, x, y, w, h, title, icon, on) {
+  const b = button(parent, x, y, w, h, null, { on, onColor: T.titleTop });
+  const c = on ? '#fff' : T.textDim;
+  const size = Math.min(26, h - 19);
+  svg(b, (w - size) / 2 - 1, 2 + (h - 19 - size) / 2, size, size, menuIcon(icon, size, c));
+  label(b, 1, h - 18, w - 4, 14, title, 12, { bold: true, align: 'center', color: c });
+}
+
+// Statusleiste und Menü (MainViewController.viewDidLayoutSubviews)
+function mainScreen(root, W, H, page) {
+  const split = W > H && W >= 900;
+  const barH = 60;
+  grad(root, 0, 0, W, barH, '#2B2F35', '#0B0C0E', 0, null);
+  el(root, 0, barH, W, 2, { background: T.titleTop });
+  const btnW = W > 900 ? 130 : 104;
+  button(root, 10, 8, btnW, 44, 'STOP', { style: 'red', size: 22 });
+  button(root, W - 10 - btnW, 8, btnW, 44, 'GO', { style: 'green', size: 22, mark: '#fff' });
+  const clockX = W - 10 - btnW - 10 - 76;
+  label(root, clockX, 8, 76, 44, '14:37', 22, { bold: true, align: 'center' });
+  let x = 10 + btnW + 14;
+  if (W >= 900) {
+    label(root, x, 6, 180, 20, 'PROFI-FAHRPULT', 16, { bold: true });
+    label(root, x, 25, 180, 14, 'für Roco/Fleischmann Z21', 11, { color: T.textDim });
+    led(root, x, 42, 12, T.green);
+    label(root, x + 18, 40, 162, 16, 'Z21 192.168.0.111', 12, { bold: true, color: T.textDim });
+    x += 190;
+  } else {
+    led(root, x, 24, 12, T.green);
+    x += 22;
+  }
+  const sd = grad(root, x, 9, Math.max(100, clockX - 10 - x), 42, '#0C0E10', '#1A1D21', 6);
+  label(sd, 10, 0, Math.max(100, clockX - 10 - x) - 22, 40, 'GLEISSPANNUNG EIN', 17, { bold: true, align: 'center', color: T.green });
+
+  const top = barH + 2;
+  const contentH = H - top;
+  const sideW = split ? Math.min(380, Math.max(270, Math.floor(W * 0.27))) : 0;
+  const centerW = W - 2 * sideW;
+  const menuH = 62;
+  const mb = grad(root, sideW, top, centerW, menuH, T.menuTop, T.menuBottom, 0, null);
+  const tabs = [['Fahren', 'drive'], ['Stellpult', 'switchboard'], ['Loks', 'locos'], ['Melder', 'feedback'], ['Prog.', 'program'], ['System', 'system']]
+    .filter((t, i) => !(split && i === 0));
+  const tabW = Math.floor((centerW - 12 - 6 * (tabs.length - 1)) / tabs.length);
+  tabs.forEach((t, i) => menuTab(mb, 6 + i * (tabW + 6), 6, tabW, menuH - 12, t[0], t[1], t[0] === page));
+
+  // DriveViewController
+  const pad = 8;
+  if (split) {
+    const drive = el(root, 0, top, W, contentH, {});
+    throttle(drive, pad, pad, sideW - pad, contentH - 2 * pad, LOCOS[0]);
+    throttle(drive, W - sideW, pad, sideW - pad, contentH - 2 * pad, LOCOS[1]);
+    switchboard(el(root, sideW, top + menuH, centerW, contentH - menuH, {}), centerW, contentH - menuH);
+  } else {
+    const drive = el(root, 0, top + menuH, W, contentH - menuH, {});
+    const w = Math.floor((W - pad * 3) / 2);
+    throttle(drive, pad, pad, w, contentH - menuH - 2 * pad, LOCOS[0]);
+    throttle(drive, pad * 2 + w, pad, w, contentH - menuH - 2 * pad, LOCOS[1]);
+  }
+}
+
+const LOCOS = [
+  { idx: 1, name: 'BR 218 217-8', addr: 218, steps: '128 FS', step: 70, max: 126, vmax: 140, fwd: true, on: [0, 1, 3], color: '#B8232A' },
+  { idx: 2, name: 'ICE 3 Velaro', addr: 403, steps: '128 FS', step: 0, max: 126, vmax: 300, fwd: false, on: [0], color: '#E8E8E8' }
+];
+
+// Funktionssymbole (Auswahl, wie FunctionIconRenderer)
+function fnIcon(kind, s, c) {
+  const L = (pts, w = 0.07) => `<polyline points="${pts.map(p => p[0] * s + ',' + p[1] * s).join(' ')}" fill="none" stroke="${c}" stroke-width="${w * s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (kind === 'light') {
+    return `<path d="M${0.38 * s},${0.22 * s} A${0.28 * s},${0.28 * s} 0 0 0 ${0.38 * s},${0.78 * s} Z" fill="${c}"/>` +
+      [0.3, 0.5, 0.7].map(y => L([[0.74, y], [0.9, y + (y - 0.5) * 0.25]])).join('');
+  }
+  const spk = `<path d="M${0.12 * s},${0.38 * s} L${0.28 * s},${0.38 * s} L${0.48 * s},${0.2 * s} L${0.48 * s},${0.8 * s} L${0.28 * s},${0.62 * s} L${0.12 * s},${0.62 * s} Z" fill="${c}"/>`;
+  if (kind === 'sound') return spk + `<path d="M${0.6 * s},${0.35 * s} Q${0.7 * s},${0.5 * s} ${0.6 * s},${0.65 * s}" fill="none" stroke="${c}" stroke-width="${0.07 * s}" stroke-linecap="round"/><path d="M${0.72 * s},${0.25 * s} Q${0.88 * s},${0.5 * s} ${0.72 * s},${0.75 * s}" fill="none" stroke="${c}" stroke-width="${0.07 * s}" stroke-linecap="round"/>`;
+  if (kind === 'horn') return `<path d="M${0.1 * s},${0.42 * s} L${0.3 * s},${0.42 * s} L${0.85 * s},${0.2 * s} L${0.85 * s},${0.8 * s} L${0.3 * s},${0.58 * s} L${0.1 * s},${0.58 * s} Z" fill="${c}"/>`;
+  if (kind === 'cab') return `<rect x="${0.15 * s}" y="${0.2 * s}" width="${0.7 * s}" height="${0.6 * s}" rx="${0.06 * s}" fill="none" stroke="${c}" stroke-width="${0.07 * s}"/>` + L([[0.3, 0.35], [0.7, 0.35]]) + L([[0.5, 0.35], [0.5, 0.7]]);
+  return '';
+}
+const FN_ICONS = ['light', 'sound', 'horn', 'cab'];
+
+// Lokbild (wie LocoImageView ohne Foto)
+function locoImage(parent, x, y, w, h, body) {
+  const d = el(parent, x, y, w, h, { background: T.inset, borderRadius: '4px', border: `1px solid ${T.panelBorder}` });
+  const u = Math.min(w / 10, h / 4.5), ox = (w - u * 10) / 2, oy = (h - u * 4.5) / 2;
+  const r = (a, b, c, e, rr = 0, f = '#1A1C20') => `<rect x="${ox + a * u}" y="${oy + b * u}" width="${c * u}" height="${e * u}" rx="${rr * u}" fill="${f}"/>`;
+  let s = r(0.6, 3.0, 8.8, 0.5) + r(0.8, 1.6, 3.4, 1.4, 0.3, body) + r(5.8, 1.6, 3.4, 1.4, 0.3, body) + r(3.9, 0.5, 2.2, 2.5, 0.2, body)
+    + r(4.2, 0.85, 0.7, 0.7, 0, 'rgba(207,227,245,.9)') + r(5.1, 0.85, 0.7, 0.7, 0, 'rgba(207,227,245,.9)')
+    + r(0.8, 2.5, 8.4, 0.15, 0, body === '#E8E8E8' ? '#C8102E' : 'rgba(255,255,255,.85)');
+  for (const px of [1.4, 2.8, 6.4, 7.8]) s += `<circle cx="${ox + px * u}" cy="${oy + 3.8 * u}" r="${0.45 * u}" fill="#1A1C20"/><circle cx="${ox + px * u}" cy="${oy + 3.8 * u}" r="${0.15 * u}" fill="${T.textDim}"/>`;
+  svg(d, -1, -1, w, h, s);
+}
+
+// Tacho (wie TachometerView.draw)
+function tacho(parent, x, y, size, L) {
+  const c = size / 2, r = size / 2 - 2, faceR = r * 0.94;
+  const start = Math.PI * 0.75, sweep = Math.PI * 1.5;
+  const scaleKmh = L.vmax, cur = scaleKmh * L.step / L.max, frac = Math.max(0, Math.min(1, cur / scaleKmh));
+  const va = start + sweep * frac;
+  const P = (a, rr) => [c + Math.cos(a) * rr, c + Math.sin(a) * rr];
+  const arcR = faceR * 0.86, arcW = Math.max(6, r * 0.07);
+  const arc = (a0, a1) => { const p0 = P(a0, arcR), p1 = P(a1, arcR); return `M${p0} A${arcR},${arcR} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p1}`; };
+  let s = `<defs><linearGradient id="ring${x}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9A9FA6"/><stop offset="1" stop-color="#2B2E33"/></linearGradient>
+    <radialGradient id="face${x}" cx="0.5" cy="0.35" r="0.6"><stop offset="0" stop-color="#2A2F37"/><stop offset="1" stop-color="#07080A"/></radialGradient>
+    <filter id="glow${x}"><feGaussianBlur stdDeviation="3"/></filter></defs>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="url(#ring${x})"/><circle cx="${c}" cy="${c}" r="${faceR}" fill="url(#face${x})"/>
+    <path d="${arc(start, start + sweep)}" fill="none" stroke="#1E2228" stroke-width="${arcW}"/>`;
+  if (frac > 0) s += `<path d="${arc(start, va)}" fill="none" stroke="${T.accent}" stroke-width="${arcW}" filter="url(#glow${x})"/><path d="${arc(start, va)}" fill="none" stroke="${T.accent}" stroke-width="${arcW}"/>`;
+  const interval = scaleKmh <= 60 ? 10 : scaleKmh <= 160 ? 20 : scaleKmh <= 400 ? 50 : 100;
+  const fs = Math.max(9, r * 0.09);
+  for (let v = 0; v <= scaleKmh + 0.001; v += interval / 2) {
+    const a = start + sweep * v / scaleKmh, major = v % interval === 0;
+    const outer = arcR - arcW / 2 - 3, inner = outer - (major ? r * 0.08 : r * 0.04);
+    s += `<line x1="${P(a, inner)[0]}" y1="${P(a, inner)[1]}" x2="${P(a, outer)[0]}" y2="${P(a, outer)[1]}" stroke="${major ? '#fff' : T.textDim}" stroke-width="${major ? 2 : 1}"/>`;
+    if (major) { const tp = P(a, inner - fs * 1.1); s += `<text x="${tp[0]}" y="${tp[1]}" fill="${T.textDim}" font-size="${fs}" font-weight="700" text-anchor="middle" dominant-baseline="central">${v}</text>`; }
+  }
+  const kmh = Math.round(cur);
+  s += `<text x="${c}" y="${c + r * 0.22}" fill="#fff" font-size="${r * 0.24}" font-weight="700" text-anchor="middle" dominant-baseline="hanging">${kmh}</text>`;
+  s += `<text x="${c}" y="${c + r * 0.22 + r * 0.3}" fill="${T.textDim}" font-size="${r * 0.075}" font-weight="700" text-anchor="middle" dominant-baseline="hanging">km/h</text>`;
+  s += `<text x="${c}" y="${c - r * 0.42}" fill="${T.accent}" font-size="${r * 0.08}" font-weight="700" text-anchor="middle" dominant-baseline="hanging">FS ${L.step}/${L.max}</text>`;
+  const aw = r * 0.16, ay = c - r * 0.2;
+  s += L.fwd ? `<polygon points="${c + aw},${ay} ${c - aw * 0.4},${ay - aw * 0.6} ${c - aw * 0.4},${ay + aw * 0.6}" fill="${T.functionOn}"/>`
+             : `<polygon points="${c - aw},${ay} ${c + aw * 0.4},${ay - aw * 0.6} ${c + aw * 0.4},${ay + aw * 0.6}" fill="${T.functionOn}"/>`;
+  const tip = P(va, arcR - arcW), bw = r * 0.035, lft = P(va + Math.PI / 2, bw), rgt = P(va - Math.PI / 2, bw), tail = P(va + Math.PI, r * 0.12);
+  s += `<polygon points="${tip} ${lft} ${tail} ${rgt}" fill="#FF5A1F" style="filter:drop-shadow(0 2px 2px #000)"/>`;
+  s += `<defs><linearGradient id="hub${x}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C8CDD4"/><stop offset="1" stop-color="#3B3F45"/></linearGradient></defs><circle cx="${c}" cy="${c}" r="${r * 0.075}" fill="url(#hub${x})"/>`;
+  svg(parent, x, y, size, size, s);
+}
+
+// ThrottleView.layoutSubviews
+function throttle(parent, X, Y, W, H, L) {
+  const p = panel(parent, X, Y, W, H, `${L.idx} · ${L.name}`, 17);
+  const C = p.content, w = W, h = H - 30, pad = 10, gap = 8;
+  const headerH = 56, selW = Math.min(120, Math.max(70, Math.floor(w * 0.26)));
+  button(C, w - pad - selW, pad, selW, headerH, 'Lok wählen', { style: 'accent', size: 14 });
+  locoImage(C, pad, pad, w - pad - selW - gap - pad, headerH, L.color);
+  label(C, pad, pad + headerH + 4, w - 2 * pad, 18, `Adresse ${L.addr} · ${L.steps}`, 13, { color: T.textDim });
+  const tachoTop = pad + headerH + 4 + 18 + 16 + 2;
+  const cols = 4, keyW = Math.floor((w - 2 * pad - (cols - 1) * gap) / cols);
+  const keyH = Math.max(44, Math.min(58, Math.floor(keyW * 0.6))), pageH = 36;
+  const fnTop = h - pad - (3 * keyH + 2 * gap + gap + pageH);
+  for (let i = 0; i < 12; i++) {
+    const on = L.on.includes(i), col = i % 4, row = Math.floor(i / 4);
+    const k = button(C, pad + col * (keyW + gap), fnTop + row * (keyH + gap), keyW, keyH, i < FN_ICONS.length ? null : `F${i}`, { on });
+    if (i < FN_ICONS.length) {
+      const sz = Math.floor(Math.min(keyW, keyH) * 0.55), clr = on ? '#000' : '#fff';
+      svg(k, (keyW - sz) / 2 - 1, (keyH - sz) / 2 - 1, sz, sz, fnIcon(FN_ICONS[i], sz, clr));
+      label(k, 4, 1, keyW - 10, 14, `F${i}`, 11, { bold: true, color: on ? 'rgba(0,0,0,.7)' : T.textDim });
+    }
+  }
+  const pageW = Math.floor((w - 2 * pad - 2 * gap) / 3);
+  ['F0–F11', 'F12–F23', 'F24–F31'].forEach((t, i) => button(C, pad + i * (pageW + gap), h - pad - pageH, pageW, pageH, t, { on: i === 0, onColor: T.accent, size: 13 }));
+  el(C, pad, fnTop - gap, w - 2 * pad, 1, { background: T.panelBorder });
+  const ctrlH = 52, ctrlTop = fnTop - 2 * gap - ctrlH;
+  const smallW = Math.floor((w - 2 * pad - 4 * gap) / 5), haltW = w - 2 * pad - 4 * gap - 4 * smallW;
+  let x = pad;
+  [['◀', !L.fwd, 24], ['−', false, 28]].forEach(b => { button(C, x, ctrlTop, smallW, ctrlH, b[0], { on: b[1], onColor: T.accent, size: b[2] }); x += smallW + gap; });
+  button(C, x, ctrlTop, haltW, ctrlH, 'HALT', { style: 'red', size: haltW < 60 ? 14 : 18 }); x += haltW + gap;
+  [['+', false, 28], ['▶', L.fwd, 24]].forEach(b => { button(C, x, ctrlTop, smallW, ctrlH, b[0], { on: b[1], onColor: T.accent, size: b[2] }); x += smallW + gap; });
+  const avail = Math.max(80, ctrlTop - gap - tachoTop), size = Math.min(w - 2 * pad, avail);
+  tacho(C, (w - size) / 2, tachoTop + (avail - size) / 2, size, L);
+}
+
+// Stellpult (SwitchboardViewController + AccessoryTile)
+const ACC = [
+  ['W1 Einfahrt', 'L', true], ['W2', 'R', false], ['W3 Gleis 3', 'L', true], ['Esig A', 'S', false],
+  ['W5', 'R', true], ['W6 Lokschuppen', 'L', false], ['Asig P1', 'S', true], ['Entkuppler', 'D', null],
+  ['W9', 'L', true], ['W10', 'R', true], ['Bahnhofslicht', 'Li', true], ['W12', 'L', null],
+  ['Weiche links', 'L', null], ['Weiche links', 'L', null], ['Weiche links', 'L', null], ['Weiche links', 'L', null]
+];
+function symbol(kind, w, h, green) {
+  const cy = h / 2, lw = Math.max(4, Math.min(w, h) * 0.09), act = T.functionOn, ina = '#4A4E55';
+  const st = (pts, col) => `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const lamp = (cx, cy2, r, col, lit) => `<circle cx="${cx}" cy="${cy2}" r="${r}" fill="${lit ? col : scale(col, 0.25)}" stroke="${T.panelBorder}"/>`;
+  if (kind === 'L' || kind === 'R') {
+    const dir = kind === 'L' ? -1 : 1, x0 = w * 0.12, x1 = w * 0.88, sp = w * 0.38, be = [x1 - w * 0.08, cy + dir * h * 0.32];
+    return green !== false ? st([[sp, cy], be], ina) + st([[x0, cy], [x1, cy]], green === null ? T.textDim : act)
+                           : st([[sp, cy], [x1, cy]], ina) + st([[x0, cy], [sp, cy], be], act);
+  }
+  if (kind === 'S') {
+    const r = Math.min(w, h) * 0.16, mx = w / 2;
+    return `<rect x="${mx - r * 1.5}" y="${cy - r * 2.6}" width="${r * 3}" height="${r * 5.2}" rx="${r * 1.4}" fill="#15171A"/>` + lamp(mx, cy - r * 1.25, r, T.red, green === false) + lamp(mx, cy + r * 1.25, r, T.green, green === true);
+  }
+  if (kind === 'D') return st([[w * 0.1, cy], [w * 0.9, cy]], ina) + `<rect x="${w * 0.38}" y="${cy - h * 0.25}" width="${w * 0.24}" height="${h * 0.5}" rx="4" fill="${T.textDim}"/>`;
+  if (kind === 'Li') return lamp(w / 2, cy, Math.min(w, h) * 0.3, T.functionOn, green);
+  return '';
+}
+function switchboard(root, W, H) {
+  const pad = 8;
+  const hp = panel(root, pad, pad, W - 2 * pad, 60, null);
+  const hw = W - 2 * pad;
+  button(hp, 8, 8, 70, 44, '◀', { size: 22 });
+  button(hp, 86, 8, 70, 44, '▶', { size: 22 });
+  button(hp, hw - 148, 8, 140, 44, 'Gehe zu …', { style: 'accent' });
+  label(hp, 160, 8, hw - 320, 44, 'Adressen 1 – 16', 20, { bold: true, align: 'center' });
+  const top = 60 + 2 * pad, tileW = Math.floor((W - pad * 5) / 4), tileH = Math.floor((H - top - pad * 4) / 4);
+  ACC.forEach((a, i) => {
+    const t = grad(root, pad + (i % 4) * (tileW + pad), top + Math.floor(i / 4) * (tileH + pad), tileW, tileH, T.panelTop, T.panelBottom, 6);
+    label(t, 7, 3, 70, 24, String(i + 1), 18, { bold: true });
+    label(t, 7, 25, tileW - 16, 16, a[0], 12, { color: T.textDim });
+    const btnH = Math.min(54, Math.max(36, tileH * 0.32)), btnW = Math.floor((tileW - 24) / 2);
+    button(t, 7, tileH - 9 - btnH, btnW, btnH, null, { style: 'red', mark: a[2] === false ? '#fff' : null });
+    button(t, 15 + btnW, tileH - 9 - btnH, btnW, btnH, null, { style: 'green', mark: a[2] === true ? '#fff' : null });
+    const sh = Math.max(10, tileH - 8 - btnH - 44 - 4);
+    svg(t, 7, 43, tileW - 16, sh, symbol(a[1], tileW - 16, sh, a[2]));
+  });
+}
+
+mainScreen(document.getElementById('land'), 1180, 820, 'Stellpult');
+mainScreen(document.getElementById('port'), 820, 1180, 'Fahren');
+</script>
+</body>
+</html>

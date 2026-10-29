@@ -1,6 +1,7 @@
 import UIKit
 
-/// Ein Fahrregler im Stil der ECoS: Lokbild, Tacho-Drehregler, Richtung und Funktionstasten.
+/// Ein Fahrregler im Stil der ECoS: Lokname in der Titelleiste, darunter Lokbild,
+/// Tacho-Drehregler, Richtung und Funktionstasten. Passt auch in die schmale Spalte am Bildschirmrand.
 final class ThrottleView: PanelView, Z21ClientObserver {
 
     let index: Int
@@ -12,7 +13,6 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private let client = Z21Client.shared
 
     private let locoImage = LocoImageView()
-    private let nameLabel = UILabel()
     private let infoLabel = UILabel()
     private let busyLabel = UILabel()
     private let selectButton = ECoSButton(title: "Lok wählen", style: .accent)
@@ -34,7 +34,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     init(index: Int) {
         self.index = index
-        super.init(title: "Regler \(index + 1)")
+        super.init(title: "Fahrregler \(index + 1)")
+        titleLabel.font = Theme.font(17, bold: true)
         setupViews()
         client.addObserver(self)
     }
@@ -50,19 +51,17 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     // MARK: Aufbau
 
     private func setupViews() {
-        nameLabel.font = Theme.font(22, bold: true)
-        nameLabel.textColor = Theme.text
-        nameLabel.adjustsFontSizeToFitWidth = true
-        nameLabel.minimumScaleFactor = 0.6
         infoLabel.font = Theme.font(13)
         infoLabel.textColor = Theme.textDim
+        infoLabel.adjustsFontSizeToFitWidth = true
+        infoLabel.minimumScaleFactor = 0.7
         busyLabel.font = Theme.font(12, bold: true)
         busyLabel.textColor = Theme.functionOn
         busyLabel.text = "Wird von anderem Gerät gesteuert"
         busyLabel.isHidden = true
         separator.backgroundColor = Theme.panelBorder
 
-        ([locoImage, nameLabel, infoLabel, busyLabel, selectButton, tacho,
+        ([locoImage, infoLabel, busyLabel, selectButton, tacho,
           reverseButton, minusButton, haltButton, plusButton, forwardButton, separator] as [UIView]).forEach {
             contentView.addSubview($0)
         }
@@ -120,17 +119,13 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         let pad: CGFloat = 10
         let gap: CGFloat = 8
 
-        // Kopfzeile
-        let headerH: CGFloat = 64
-        let imgW = min(130, w * 0.3)
-        locoImage.frame = CGRect(x: pad, y: pad, width: imgW, height: headerH - 6)
-        let selW = min(120, w * 0.28)
-        selectButton.frame = CGRect(x: w - pad - selW, y: pad + 8, width: selW, height: 42)
-        let textX = locoImage.frame.maxX + 10
-        let textW = selectButton.frame.minX - 8 - textX
-        nameLabel.frame = CGRect(x: textX, y: pad, width: textW, height: 28)
-        infoLabel.frame = CGRect(x: textX, y: pad + 28, width: textW, height: 18)
-        busyLabel.frame = CGRect(x: textX, y: pad + 45, width: textW, height: 16)
+        // Kopfzeile: Lokbild und Auswahl, darunter Adresse und Hinweise
+        let headerH: CGFloat = 56
+        let selW = min(120, max(70, floor(w * 0.26)))
+        selectButton.frame = CGRect(x: w - pad - selW, y: pad, width: selW, height: headerH)
+        locoImage.frame = CGRect(x: pad, y: pad, width: selectButton.frame.minX - gap - pad, height: headerH)
+        infoLabel.frame = CGRect(x: pad, y: locoImage.frame.maxY + 4, width: w - 2 * pad, height: 18)
+        busyLabel.frame = CGRect(x: pad, y: infoLabel.frame.maxY, width: w - 2 * pad, height: 16)
 
         // Funktionstasten unten
         let cols: CGFloat = 4
@@ -169,7 +164,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         }
 
         // Tacho füllt den Rest
-        let tachoTop = pad + headerH + 4
+        let tachoTop = busyLabel.frame.maxY + 2
         let avail = max(80, ctrlTop - gap - tachoTop)
         let size = min(w - 2 * pad, avail)
         tacho.frame = CGRect(x: (w - size) / 2, y: tachoTop + (avail - size) / 2, width: size, height: size)
@@ -180,7 +175,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     func setLoco(_ loco: Locomotive?) {
         self.loco = loco
         let active = loco != nil
-        nameLabel.text = loco?.name ?? "Keine Lok"
+        title = loco.map { "\(index + 1) · \($0.name)" } ?? "Fahrregler \(index + 1) – keine Lok"
         locoImage.image = loco.flatMap { LocoStore.shared.image(for: $0) }
         locoImage.isDimmed = !active
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120

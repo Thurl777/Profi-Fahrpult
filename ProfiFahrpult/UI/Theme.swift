@@ -11,7 +11,7 @@ enum Theme {
                        alpha: alpha)
     }
 
-    static let background = rgb(0x111316)
+    static let background = rgb(0x08090B)
     static let panelTop = rgb(0x3A3E44)
     static let panelBottom = rgb(0x25282C)
     static let panelBorder = rgb(0x55595F)
@@ -19,6 +19,10 @@ enum Theme {
 
     static let titleTop = rgb(0x3A72BF)
     static let titleBottom = rgb(0x1D4583)
+
+    /// Menüleiste zwischen den beiden Fahrreglern
+    static let menuTop = rgb(0x30343A)
+    static let menuBottom = rgb(0x17191C)
 
     static let buttonTop = rgb(0x62666D)
     static let buttonBottom = rgb(0x383B40)

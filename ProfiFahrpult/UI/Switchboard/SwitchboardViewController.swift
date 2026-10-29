@@ -30,6 +30,8 @@ final class SwitchboardViewController: UIViewController, Z21ClientObserver {
         pageLabel.font = Theme.font(20, bold: true)
         pageLabel.textColor = Theme.text
         pageLabel.textAlignment = .center
+        pageLabel.adjustsFontSizeToFitWidth = true
+        pageLabel.minimumScaleFactor = 0.6
         header.contentView.addSubview(pageLabel)
         for b in [prevButton, nextButton] {
             b.titleLabel?.font = Theme.font(22, bold: true)

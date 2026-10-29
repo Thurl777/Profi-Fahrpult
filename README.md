@@ -19,8 +19,13 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 | **Prog.** | CV lesen/schreiben auf dem Programmiergleis, POM (Hauptgleis) schreiben/lesen, Bit-Ansicht, Lokadresse lesen/schreiben (kurz und lang, inkl. CV29) |
 | **System** | IP/Port der Z21, Verbinden/Trennen, Hardware, Firmware, Seriennummer, Ströme, Temperatur, Spannungen, Einstellungen (STOP-Verhalten, Schaltzeit, Bildschirmsperre …) |
 
-Oben stehen immer Verbindungsstatus, Gleisstatus (Gleisspannung ein/aus, Nothalt, Kurzschluss,
-Programmiermodus) sowie STOP und GO.
+Der Bildschirm ist wie bei der ECoS aufgebaut: oben die Statusleiste mit STOP (links), Verbindungs- und
+Gleisstatus (Gleisspannung ein/aus, Nothalt, Kurzschluss, Programmiermodus), Uhrzeit und GO (rechts).
+Im Querformat sitzen die beiden Fahrregler fest am linken und rechten Rand; dazwischen liegt die
+Menüleiste mit Symbolen und der gewählte Bereich (Stellpult, Loks, Melder, Prog., System).
+Im Hochformat sind die Fahrregler die Seite „Fahren“ in der Menüleiste.
+
+![Querformat](docs/mockup/querformat.png)
 
 ## Loks einmessen
 
