@@ -99,6 +99,24 @@ Voraussetzungen: ein Mac mit Xcode und eine (kostenlose) Apple-ID.
 Mit einer kostenlosen Apple-ID muss die App alle 7 Tage neu aus Xcode installiert werden.
 Mit einem kostenpflichtigen Entwicklerkonto gilt sie ein Jahr.
 
+### Ohne eigenen Mac: Cloud-Build + Sideloadly
+
+Wer keinen Mac hat, kann den Xcode-Build per GitHub Actions in der Cloud laufen lassen und
+die fertige App dann von einem Windows-PC aus aufs iPad bringen:
+
+1. Im GitHub-Repository unter **Actions → Build IPA → Run workflow** den Workflow starten
+   (er läuft auch automatisch bei jedem Push auf `main`).
+2. Nach erfolgreichem Lauf das Artefakt **ProfiFahrpult-ipa** herunterladen und entpacken –
+   darin liegt `ProfiFahrpult.ipa`. Die App ist darin absichtlich **unsigniert**.
+3. Auf einem Windows- (oder Linux-)PC [Sideloadly](https://sideloadly.io) installieren,
+   iPad per USB-Kabel anschließen, die `.ipa` hineinziehen, mit der eigenen (kostenlosen)
+   Apple-ID anmelden und installieren lassen. Sideloadly signiert die App dabei selbst –
+   genau das, was sonst Xcode erledigt.
+4. Wie beim direkten Xcode-Weg läuft die App mit einer kostenlosen Apple-ID nur 7 Tage;
+   danach einfach dieselbe `.ipa` erneut über Sideloadly installieren (ein neuer Cloud-Build
+   ist nur nötig, wenn sich der Code geändert hat).
+5. Beim ersten Start auf dem iPad den Zugriff auf das **lokale Netzwerk** erlauben.
+
 ## Verbindung zur Z21
 
 - Das iPad muss im WLAN des Routers sein, an dem die Z21 hängt.

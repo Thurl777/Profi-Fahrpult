@@ -1,0 +1,41 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verfügbare Schemes anzeigen
+        run: xcodebuild -list -project ProfiFahrpult.xcodeproj
+
+      - name: Unsigniert für iOS-Gerät bauen
+        run: |
+          xcodebuild \
+            -project ProfiFahrpult.xcodeproj \
+            -scheme ProfiFahrpult \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            clean build
+
+      - name: IPA packen
+        run: |
+          set -e
+          APP_PATH="build/Build/Products/Release-iphoneos/ProfiFahrpult.app"
+          mkdir -p ipa/Payload
+          cp -R "$APP_PATH" ipa/Payload/
+          cd ipa
+          zip -r -y ../ProfiFahrpult.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ProfiFahrpult-ipa
+          path: ProfiFahrpult.ipa
