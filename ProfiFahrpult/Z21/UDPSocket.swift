@@ -77,7 +77,7 @@ final class UDPSocket {
         }
         guard bindResult == 0 else {
             let e = errno
-            _ = closeFD(s)
+            UDPSocket.closeFD(s)
             throw SocketError.bindFailed(e)
         }
 
@@ -97,7 +97,7 @@ final class UDPSocket {
             self?.readAvailable(fd: s)
         }
         source.setCancelHandler {
-            _ = UDPSocket.closeFD(s)
+            UDPSocket.closeFD(s)
         }
         readSource = source
         source.resume()
@@ -108,7 +108,7 @@ final class UDPSocket {
             source.cancel()   // schließt den Deskriptor im Cancel-Handler
             readSource = nil
         } else if fd >= 0 {
-            _ = UDPSocket.closeFD(fd)
+            UDPSocket.closeFD(fd)
         }
         fd = -1
     }
@@ -149,9 +149,5 @@ final class UDPSocket {
         #else
         return Glibc.close(s)
         #endif
-    }
-
-    private func closeFD(_ s: Int32) -> Int32 {
-        return UDPSocket.closeFD(s)
     }
 }
