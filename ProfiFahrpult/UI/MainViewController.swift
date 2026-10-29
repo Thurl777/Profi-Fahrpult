@@ -1,42 +1,37 @@
 import UIKit
 
-/// Hauptfenster im Aufbau der ECoS: oben die Statusleiste mit STOP (links) und GO (rechts),
-/// im Querformat die beiden Fahrregler fest am linken und rechten Rand und dazwischen
-/// die Menüleiste mit dem gewählten Bereich (Stellpult, Loks, Melder …).
-/// Im Hochformat reicht der Platz dafür nicht; dann sind die Fahrregler die Seite „Fahren“.
+/// Hauptfenster wie das Display der ECoS: oben die blaue Menüleiste mit Symboltasten
+/// (die gewählte leuchtet gelb), links daneben STOP und rechts GO als Gerätetasten,
+/// darunter eine schmale Statuszeile und der gewählte Bereich. Unter „Fahren“ stehen die
+/// beiden Fahrregler nebeneinander – im Hoch- und im Querformat.
 final class MainViewController: UIViewController, Z21ClientObserver {
 
     private let client = Z21Client.shared
 
-    private let topBar = GradientView(colors: [Theme.rgb(0x2B2F35), Theme.rgb(0x0B0C0E)], cornerRadius: 0, border: nil)
-    private let topBarLine = UIView()
-    private let titleLabel = UILabel()
-    private let subtitleLabel = UILabel()
+    private let menuBar = GradientView(colors: [Theme.menuTop, Theme.menuBottom], cornerRadius: 0, border: nil)
+    private let menuLine = UIView()
+    private let stopButton = ECoSButton(title: "STOP", style: .key)
+    private let goButton = ECoSButton(title: "GO", style: .key)
+
+    private let statusBar = UIView()
     private let connectionLED = StatusLED(frame: .zero)
     private let connectionLabel = UILabel()
-    private let statusDisplay = GradientView(colors: [Theme.rgb(0x0C0E10), Theme.rgb(0x1A1D21)], cornerRadius: 6,
-                                             border: Theme.panelBorder)
     private let statusLabel = UILabel()
     private let clockLabel = UILabel()
-    private let stopButton = ECoSButton(title: "STOP", style: .red)
-    private let goButton = ECoSButton(title: "GO", style: .green)
     private var clockTimer: Timer?
 
-    private let menuBar = GradientView(colors: [Theme.menuTop, Theme.menuBottom], cornerRadius: 0, border: nil)
     private let container = UIView()
-    private let driveController = DriveViewController()
 
     private struct Page {
         let title: String
         let icon: MenuIcon
-        /// nil = die Fahrregler, die immer im Hauptfenster bleiben
-        let make: (() -> UIViewController)?
+        let make: () -> UIViewController
     }
 
     private let pages: [Page] = [
-        Page(title: "Fahren", icon: .drive, make: nil),
-        Page(title: "Stellpult", icon: .switchboard) { SwitchboardViewController() },
+        Page(title: "Fahren", icon: .drive) { DriveViewController() },
         Page(title: "Loks", icon: .locos) { UINavigationController(rootViewController: LocoListViewController(style: .plain)) },
+        Page(title: "Stellpult", icon: .switchboard) { SwitchboardViewController() },
         Page(title: "Melder", icon: .feedback) { FeedbackViewController() },
         Page(title: "Prog.", icon: .program) { ProgramViewController() },
         Page(title: "System", icon: .system) {
@@ -48,8 +43,6 @@ final class MainViewController: UIViewController, Z21ClientObserver {
     private var navButtons: [MenuTabButton] = []
     private var controllers: [Int: UIViewController] = [:]
     private var currentPage = -1
-    /// Querformat: Fahrregler links und rechts, Menü in der Mitte
-    private var isSplit = false
 
     override var prefersStatusBarHidden: Bool { return true }
     override var preferredStatusBarStyle: UIStatusBarStyle { return .lightContent }
@@ -58,43 +51,18 @@ final class MainViewController: UIViewController, Z21ClientObserver {
         super.viewDidLoad()
         view.backgroundColor = Theme.background
 
-        addChild(driveController)
-        view.addSubview(driveController.view)
-        driveController.didMove(toParent: self)
         view.addSubview(container)
+        view.addSubview(statusBar)
         view.addSubview(menuBar)
-        view.addSubview(topBar)
-        topBarLine.backgroundColor = Theme.titleTop
-        view.addSubview(topBarLine)
+        menuLine.backgroundColor = Theme.titleLine
+        view.addSubview(menuLine)
 
-        titleLabel.text = "PROFI-FAHRPULT"
-        titleLabel.font = Theme.font(16, bold: true)
-        titleLabel.textColor = Theme.text
-        subtitleLabel.text = "für Roco/Fleischmann Z21"
-        subtitleLabel.font = Theme.font(11)
-        subtitleLabel.textColor = Theme.textDim
-        connectionLabel.font = Theme.font(12, bold: true)
-        connectionLabel.textColor = Theme.textDim
-        connectionLabel.adjustsFontSizeToFitWidth = true
-        connectionLabel.minimumScaleFactor = 0.7
-        statusLabel.font = Theme.font(17, bold: true)
-        statusLabel.textAlignment = .center
-        statusLabel.adjustsFontSizeToFitWidth = true
-        statusLabel.minimumScaleFactor = 0.6
-        statusDisplay.addSubview(statusLabel)
-        clockLabel.font = Theme.monoFont(22, bold: true)
-        clockLabel.textColor = Theme.text
-        clockLabel.textAlignment = .center
-        stopButton.titleLabel?.font = Theme.font(22, bold: true)
-        goButton.titleLabel?.font = Theme.font(22, bold: true)
+        for b in [stopButton, goButton] {
+            b.titleLabel?.font = Theme.font(20, bold: true)
+            menuBar.addSubview(b)
+        }
         stopButton.addTarget(self, action: #selector(stopTapped), for: .touchUpInside)
         goButton.addTarget(self, action: #selector(goTapped), for: .touchUpInside)
-        ([titleLabel, subtitleLabel, connectionLED, connectionLabel, statusDisplay, clockLabel,
-          stopButton, goButton] as [UIView]).forEach {
-            topBar.addSubview($0)
-        }
-        let statusTap = UITapGestureRecognizer(target: self, action: #selector(statusTapped))
-        statusDisplay.addGestureRecognizer(statusTap)
 
         for (i, page) in pages.enumerated() {
             let b = MenuTabButton(title: page.title, icon: page.icon)
@@ -103,6 +71,20 @@ final class MainViewController: UIViewController, Z21ClientObserver {
             menuBar.addSubview(b)
             navButtons.append(b)
         }
+
+        statusBar.backgroundColor = Theme.bar
+        connectionLabel.font = Theme.font(12, bold: true)
+        connectionLabel.textColor = .white
+        statusLabel.font = Theme.font(14, bold: true)
+        statusLabel.textAlignment = .center
+        statusLabel.adjustsFontSizeToFitWidth = true
+        statusLabel.minimumScaleFactor = 0.7
+        clockLabel.font = Theme.monoFont(15, bold: true)
+        clockLabel.textColor = .white
+        clockLabel.textAlignment = .right
+        ([connectionLED, connectionLabel, statusLabel, clockLabel] as [UIView]).forEach { statusBar.addSubview($0) }
+        let statusTap = UITapGestureRecognizer(target: self, action: #selector(statusTapped))
+        statusBar.addGestureRecognizer(statusTap)
 
         client.addObserver(self)
         showPage(0)
@@ -124,68 +106,39 @@ final class MainViewController: UIViewController, Z21ClientObserver {
         let w = view.bounds.width
         let h = view.bounds.height
 
-        isSplit = w > h && w >= 900
-        if isSplit && currentPage == 0 {
-            showPage(1)
-        }
-
-        // Statusleiste
+        // Menüleiste: STOP | Symboltasten | GO
         let barH: CGFloat = 60 + insets.top
-        topBar.frame = CGRect(x: 0, y: 0, width: w, height: barH)
-        topBarLine.frame = CGRect(x: 0, y: barH, width: w, height: 2)
-
-        let y0 = insets.top
-        let btnW: CGFloat = w > 900 ? 130 : 104
-        stopButton.frame = CGRect(x: insets.left + 10, y: y0 + 8, width: btnW, height: 44)
-        goButton.frame = CGRect(x: w - insets.right - 10 - btnW, y: y0 + 8, width: btnW, height: 44)
-        let clockW: CGFloat = 76
-        clockLabel.frame = CGRect(x: goButton.frame.minX - 10 - clockW, y: y0 + 8, width: clockW, height: 44)
-
-        var x = stopButton.frame.maxX + 14
-        let showTitle = w >= 900
-        titleLabel.isHidden = !showTitle
-        subtitleLabel.isHidden = !showTitle
-        if showTitle {
-            titleLabel.frame = CGRect(x: x, y: y0 + 6, width: 180, height: 20)
-            subtitleLabel.frame = CGRect(x: x, y: y0 + 25, width: 180, height: 14)
-            connectionLED.frame = CGRect(x: x, y: y0 + 42, width: 12, height: 12)
-            connectionLabel.frame = CGRect(x: x + 18, y: y0 + 40, width: 162, height: 16)
-            x += 190
-        } else {
-            connectionLED.frame = CGRect(x: x, y: y0 + 24, width: 12, height: 12)
-            connectionLabel.frame = .zero
-            x += 22
+        menuBar.frame = CGRect(x: 0, y: 0, width: w, height: barH)
+        menuLine.frame = CGRect(x: 0, y: barH, width: w, height: 1)
+        let y0 = insets.top + 7
+        let keyH: CGFloat = 46
+        let keyW: CGFloat = w > 900 ? 110 : 88
+        stopButton.frame = CGRect(x: insets.left + 10, y: y0, width: keyW, height: keyH)
+        goButton.frame = CGRect(x: w - insets.right - 10 - keyW, y: y0, width: keyW, height: keyH)
+        let tabsX = stopButton.frame.maxX + 16
+        let tabsW = goButton.frame.minX - 16 - tabsX
+        let tabGap: CGFloat = 8
+        let count = CGFloat(navButtons.count)
+        let tabW = min(120, floor((tabsW - tabGap * (count - 1)) / count))
+        let startX = tabsX + (tabsW - (tabW * count + tabGap * (count - 1))) / 2
+        for (i, b) in navButtons.enumerated() {
+            b.frame = CGRect(x: startX + CGFloat(i) * (tabW + tabGap), y: y0, width: tabW, height: keyH)
         }
-        statusDisplay.frame = CGRect(x: x, y: y0 + 9, width: max(100, clockLabel.frame.minX - 10 - x), height: 42)
-        statusLabel.frame = statusDisplay.bounds.insetBy(dx: 10, dy: 0)
 
-        // Inhalt
-        let top = barH + 2
-        let contentW = w - insets.left - insets.right
-        let contentH = h - top - insets.bottom
-        let sideW: CGFloat = isSplit ? min(380, max(270, floor(w * 0.27))) : 0
-        driveController.sideWidth = sideW
+        // Statuszeile
+        let statusH: CGFloat = 26
+        statusBar.frame = CGRect(x: 0, y: barH + 1, width: w, height: statusH)
+        let sx = insets.left + 12
+        connectionLED.frame = CGRect(x: sx, y: 7, width: 12, height: 12)
+        let sideW = min(220, floor(w * 0.25))
+        connectionLabel.frame = CGRect(x: sx + 18, y: 0, width: sideW - 18, height: statusH)
+        clockLabel.frame = CGRect(x: w - insets.right - 12 - 80, y: 0, width: 80, height: statusH)
+        let statusX = sx + sideW
+        statusLabel.frame = CGRect(x: statusX, y: 0, width: w - insets.right - 12 - sideW - statusX, height: statusH)
 
-        let centerX = insets.left + sideW
-        let centerW = contentW - 2 * sideW
-        let menuH: CGFloat = 62
-        menuBar.frame = CGRect(x: centerX, y: top, width: centerW, height: menuH)
-        container.frame = CGRect(x: centerX, y: top + menuH, width: centerW, height: contentH - menuH)
-        if isSplit {
-            driveController.view.frame = CGRect(x: insets.left, y: top, width: contentW, height: contentH)
-        } else {
-            driveController.view.frame = container.frame
-        }
-        driveController.view.isHidden = !isSplit && currentPage != 0
-        container.isHidden = currentPage == 0
-
-        let visible = navButtons.filter { !(isSplit && $0.tag == 0) }
-        navButtons[0].isHidden = isSplit
-        let tabGap: CGFloat = 6
-        let tabW = floor((centerW - 12 - tabGap * CGFloat(visible.count - 1)) / CGFloat(visible.count))
-        for (i, b) in visible.enumerated() {
-            b.frame = CGRect(x: 6 + CGFloat(i) * (tabW + tabGap), y: 6, width: tabW, height: menuH - 12)
-        }
+        let top = statusBar.frame.maxY
+        container.frame = CGRect(x: insets.left, y: top, width: w - insets.left - insets.right,
+                                 height: h - top - insets.bottom)
         controllers[currentPage]?.view.frame = container.bounds
     }
 
@@ -202,25 +155,22 @@ final class MainViewController: UIViewController, Z21ClientObserver {
             old.view.removeFromSuperview()
             old.removeFromParent()
         }
-        if let make = pages[index].make {
-            let vc: UIViewController
-            if let existing = controllers[index] {
-                vc = existing
-            } else {
-                vc = make()
-                controllers[index] = vc
-            }
-            addChild(vc)
-            vc.view.frame = container.bounds
-            vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            container.addSubview(vc.view)
-            vc.didMove(toParent: self)
+        let vc: UIViewController
+        if let existing = controllers[index] {
+            vc = existing
+        } else {
+            vc = pages[index].make()
+            controllers[index] = vc
         }
+        addChild(vc)
+        vc.view.frame = container.bounds
+        vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        container.addSubview(vc.view)
+        vc.didMove(toParent: self)
         currentPage = index
         for b in navButtons {
             b.isOn = b.tag == index
         }
-        view.setNeedsLayout()
     }
 
     // MARK: STOP / GO
@@ -255,12 +205,14 @@ final class MainViewController: UIViewController, Z21ClientObserver {
     private func updateStatus() {
         let text: String
         let color: UIColor
+        let lightGreen = Theme.rgb(0x9BF0A8)
+        let lightRed = Theme.rgb(0xFFB3AE)
         switch client.connectionState {
         case .disconnected:
             connectionLED.color = Theme.red
             connectionLabel.text = "Nicht verbunden"
             text = "KEINE VERBINDUNG – hier tippen"
-            color = Theme.textDim
+            color = .white
         case .connecting:
             connectionLED.color = Theme.functionOn
             connectionLabel.text = "Verbinde mit \(client.host) …"
@@ -270,12 +222,12 @@ final class MainViewController: UIViewController, Z21ClientObserver {
             connectionLED.color = Theme.green
             connectionLabel.text = "Z21 \(client.host)"
             switch client.trackStatus {
-            case .on: text = "GLEISSPANNUNG EIN"; color = Theme.green
-            case .off: text = "STOP – GLEISSPANNUNG AUS"; color = Theme.red
-            case .emergencyStop: text = "NOTHALT – ALLE LOKS ANGEHALTEN"; color = Theme.red
-            case .shortCircuit: text = "KURZSCHLUSS!"; color = Theme.red
+            case .on: text = "GLEISSPANNUNG EIN"; color = lightGreen
+            case .off: text = "STOP – GLEISSPANNUNG AUS"; color = lightRed
+            case .emergencyStop: text = "NOTHALT – ALLE LOKS ANGEHALTEN"; color = lightRed
+            case .shortCircuit: text = "KURZSCHLUSS!"; color = lightRed
             case .programming: text = "PROGRAMMIERMODUS"; color = Theme.functionOn
-            case .unknown: text = "STATUS UNBEKANNT"; color = Theme.textDim
+            case .unknown: text = "STATUS UNBEKANNT"; color = .white
             }
         }
         statusLabel.text = text
@@ -283,10 +235,11 @@ final class MainViewController: UIViewController, Z21ClientObserver {
         let connected = client.connectionState == .connected
         stopButton.isEnabled = connected
         goButton.isEnabled = connected
+        // Wie an der ECoS leuchtet der Rahmen der aktiven Taste: STOP rot, GO grün
         let stoppedStates: [TrackStatus] = [.off, .emergencyStop, .shortCircuit]
         let stopped = connected && stoppedStates.contains(client.trackStatus)
-        stopButton.markColor = stopped ? UIColor.white : nil
-        goButton.markColor = connected && client.trackStatus == .on ? UIColor.white : nil
+        stopButton.markColor = stopped ? Theme.red : nil
+        goButton.markColor = connected && client.trackStatus == .on ? Theme.green : nil
     }
 
     func z21ClientConnectionChanged(_ client: Z21Client) { updateStatus() }
@@ -303,7 +256,8 @@ enum MenuIcon {
     case system
 }
 
-/// Reiter der Menüleiste: Symbol über der Beschriftung, der gewählte Reiter leuchtet blau.
+/// Taste der Menüleiste wie oben auf dem ECoS-Display: dunkel mit weißem Rand und weißem
+/// Symbol, die gewählte Taste ist gelb mit dunklem Symbol.
 final class MenuTabButton: ECoSButton {
 
     private let icon: MenuIcon
@@ -313,7 +267,7 @@ final class MenuTabButton: ECoSButton {
     init(title: String, icon: MenuIcon) {
         self.icon = icon
         super.init(frame: .zero)
-        onColor = Theme.titleTop
+        onColor = Theme.functionOn
         iconView.contentMode = .center
         iconView.isUserInteractionEnabled = false
         label.text = title
@@ -348,7 +302,7 @@ final class MenuTabButton: ECoSButton {
     }
 
     private func updateContent() {
-        let color: UIColor = isOn ? .white : Theme.textDim
+        let color: UIColor = isOn ? Theme.text : .white
         label.textColor = color
         let size = min(26, iconView.bounds.height)
         iconView.image = size > 8 ? MenuTabButton.image(icon, size: size, color: color) : nil
@@ -357,7 +311,7 @@ final class MenuTabButton: ECoSButton {
     private static var cache: [String: UIImage] = [:]
 
     static func image(_ icon: MenuIcon, size: CGFloat, color: UIColor) -> UIImage? {
-        let key = "\(icon)-\(Int(size))-\(color == .white)"
+        let key = "\(icon)-\(Int(size))-\(color == UIColor.white)"
         if let img = cache[key] { return img }
         UIGraphicsBeginImageContextWithOptions(CGSize(width: size, height: size), false, 0)
         defer { UIGraphicsEndImageContext() }

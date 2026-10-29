@@ -212,8 +212,8 @@ final class AccessoryTile: GradientView {
         default: isGreen = nil
         }
         symbol.isGreen = isGreen
-        redButton.markColor = isGreen == false ? UIColor.white : nil
-        greenButton.markColor = isGreen == true ? UIColor.white : nil
+        redButton.markColor = isGreen == false ? Theme.text : nil
+        greenButton.markColor = isGreen == true ? Theme.text : nil
     }
 
     override func layoutSubviews() {
@@ -271,8 +271,8 @@ final class AccessorySymbolView: UIView {
         let h = bounds.height
         let cy = h / 2
         let lineW = max(4, min(w, h) * 0.09)
-        let active = Theme.functionOn
-        let inactive = Theme.rgb(0x4A4E55)
+        let active = Theme.text
+        let inactive = Theme.rgb(0xA3B1CB)
 
         func stroke(_ pts: [CGPoint], _ color: UIColor) {
             let p = UIBezierPath()
@@ -366,7 +366,7 @@ final class AccessoryEditViewController: UITableViewController, UITextFieldDeleg
         nameField.textColor = Theme.text
         nameField.textAlignment = .right
         nameField.delegate = self
-        nameField.keyboardAppearance = .dark
+        nameField.keyboardAppearance = .light
         invertSwitch.isOn = config.inverted
     }
 

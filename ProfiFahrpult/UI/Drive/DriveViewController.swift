@@ -5,14 +5,6 @@ final class DriveViewController: UIViewController {
 
     private var throttles: [ThrottleView] = []
 
-    /// Breite der Regler am linken und rechten Rand. 0 = die Regler teilen sich die ganze Breite.
-    /// Bei einer Breite > 0 bleibt die Mitte frei für das Menü des Hauptfensters.
-    var sideWidth: CGFloat = 0 {
-        didSet {
-            if sideWidth != oldValue { view.setNeedsLayout() }
-        }
-    }
-
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Theme.background
@@ -38,17 +30,10 @@ final class DriveViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let pad: CGFloat = 8
-        let h = view.bounds.height - 2 * pad
-        if sideWidth > 0 && throttles.count == 2 {
-            let w = sideWidth - pad
-            throttles[0].frame = CGRect(x: pad, y: pad, width: w, height: h)
-            throttles[1].frame = CGRect(x: view.bounds.width - sideWidth, y: pad, width: w, height: h)
-            return
-        }
         let count = CGFloat(throttles.count)
         let w = floor((view.bounds.width - pad * (count + 1)) / count)
         for (i, t) in throttles.enumerated() {
-            t.frame = CGRect(x: pad + CGFloat(i) * (w + pad), y: pad, width: w, height: h)
+            t.frame = CGRect(x: pad + CGFloat(i) * (w + pad), y: pad, width: w, height: view.bounds.height - 2 * pad)
         }
     }
 

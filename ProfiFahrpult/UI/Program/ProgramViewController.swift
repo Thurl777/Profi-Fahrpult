@@ -37,7 +37,7 @@ final class ProgramViewController: UIViewController, UITextFieldDelegate, Z21Cli
         tf.font = Theme.monoFont(24, bold: true)
         tf.textAlignment = .center
         tf.keyboardType = .numberPad
-        tf.keyboardAppearance = .dark
+        tf.keyboardAppearance = .light
         tf.layer.cornerRadius = 4
         tf.layer.borderColor = Theme.panelBorder.cgColor
         tf.layer.borderWidth = 1
@@ -119,12 +119,11 @@ final class ProgramViewController: UIViewController, UITextFieldDelegate, Z21Cli
         addressPanel.frame = CGRect(x: pad, y: cvPanel.frame.maxY + pad, width: leftW - pad, height: 190)
         logPanel.frame = CGRect(x: leftW + pad, y: pad, width: w - leftW - 2 * pad, height: h - 2 * pad)
         if w < 700 {
-            // Hochformat bzw. schmale Mitte zwischen den Fahrreglern: Protokoll unten
-            let tight = h < 700
-            cvPanel.frame = CGRect(x: pad, y: pad, width: w - 2 * pad, height: tight ? 326 : 380)
-            addressPanel.frame = CGRect(x: pad, y: cvPanel.frame.maxY + pad, width: w - 2 * pad, height: tight ? 166 : 190)
+            // Hochformat: Protokoll unten
+            cvPanel.frame = CGRect(x: pad, y: pad, width: w - 2 * pad, height: 380)
+            addressPanel.frame = CGRect(x: pad, y: cvPanel.frame.maxY + pad, width: w - 2 * pad, height: 190)
             logPanel.frame = CGRect(x: pad, y: addressPanel.frame.maxY + pad, width: w - 2 * pad,
-                                    height: max(80, h - addressPanel.frame.maxY - 2 * pad))
+                                    height: max(120, h - addressPanel.frame.maxY - 2 * pad))
         }
         [cvPanel, addressPanel, logPanel].forEach { $0.layoutIfNeeded() }
 

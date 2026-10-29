@@ -19,11 +19,12 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 | **Prog.** | CV lesen/schreiben auf dem Programmiergleis, POM (Hauptgleis) schreiben/lesen, Bit-Ansicht, Lokadresse lesen/schreiben (kurz und lang, inkl. CV29) |
 | **System** | IP/Port der Z21, Verbinden/Trennen, Hardware, Firmware, Seriennummer, Ströme, Temperatur, Spannungen, Einstellungen (STOP-Verhalten, Schaltzeit, Bildschirmsperre …) |
 
-Der Bildschirm ist wie bei der ECoS aufgebaut: oben die Statusleiste mit STOP (links), Verbindungs- und
-Gleisstatus (Gleisspannung ein/aus, Nothalt, Kurzschluss, Programmiermodus), Uhrzeit und GO (rechts).
-Im Querformat sitzen die beiden Fahrregler fest am linken und rechten Rand; dazwischen liegt die
-Menüleiste mit Symbolen und der gewählte Bereich (Stellpult, Loks, Melder, Prog., System).
-Im Hochformat sind die Fahrregler die Seite „Fahren“ in der Menüleiste.
+Aussehen und Farben entsprechen dem Display der ESU ECoS: oben die blaue Menüleiste mit Symboltasten
+(die gewählte leuchtet gelb), links daneben STOP und rechts GO, deren Rahmen wie die LEDs der ECoS
+leuchten. Darunter eine Statuszeile mit Verbindung, Gleisstatus (Gleisspannung ein/aus, Nothalt,
+Kurzschluss, Programmiermodus) und Uhrzeit. Unter „Fahren“ stehen im Hoch- und Querformat die beiden
+Fahrregler nebeneinander: Lokname, ◀ Lokbild ▶, schwarzer Tacho mit gelbem Zeiger, Funktionstasten und
+die blaue Tastenleiste mit „Lok wählen“.
 
 ![Querformat](docs/mockup/querformat.png)
 
