@@ -241,18 +241,18 @@ final class TachometerView: UIControl {
             text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
         }
 
-        // Geschwindigkeit rechtsbündig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
+        // Geschwindigkeit mittig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
         let speedFont = Theme.font(r * 0.18, bold: true)
         let speedAttrs: [NSAttributedString.Key: Any] = [.font: speedFont, .foregroundColor: white]
         let speedText = "\(Int(speeds.current.rounded()))" as NSString
         let speedSize = speedText.size(withAttributes: speedAttrs)
-        speedText.draw(at: CGPoint(x: c.x + r * 0.143 - speedSize.width, y: c.y + r * 0.5 - speedSize.height / 2),
+        speedText.draw(at: CGPoint(x: c.x - speedSize.width / 2, y: c.y + r * 0.5 - speedSize.height / 2),
                        withAttributes: speedAttrs)
         let unitAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(r * 0.13, bold: true),
                                                         .foregroundColor: emergencyStop ? Theme.red : white]
         let unit = (emergencyStop ? "NOTHALT" : "km/h") as NSString
         let unitSize = unit.size(withAttributes: unitAttrs)
-        unit.draw(at: CGPoint(x: c.x + r * 0.045 - unitSize.width / 2, y: c.y + r * 0.7 - unitSize.height / 2),
+        unit.draw(at: CGPoint(x: c.x - unitSize.width / 2, y: c.y + r * 0.7 - unitSize.height / 2),
                   withAttributes: unitAttrs)
 
         // Gelber Zeiger: gerader Schaft mit dunkler Mittellinie, spitz auslaufend
