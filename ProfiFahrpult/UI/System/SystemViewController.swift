@@ -38,7 +38,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
             tf.font = Theme.monoFont(17)
             tf.textAlignment = .right
             tf.keyboardType = .numbersAndPunctuation
-            tf.keyboardAppearance = .dark
+            tf.keyboardAppearance = .light
             tf.autocorrectionType = .no
             tf.autocapitalizationType = .none
             tf.delegate = self
@@ -225,7 +225,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
             case .disconnected: text = client.lastError ?? "Nicht verbunden"
             }
             let cell = valueCell("Status", text)
-            cell.detailTextLabel?.textColor = client.connectionState == .connected ? Theme.green : Theme.functionOn
+            cell.detailTextLabel?.textColor = client.connectionState == .connected ? Theme.green : Theme.functionOnDark
             return cell
         case .hardware: return valueCell("Hardware", client.hardwareType.map { Z21Codec.hardwareName($0) })
         case .firmware: return valueCell("Firmware", client.firmware)

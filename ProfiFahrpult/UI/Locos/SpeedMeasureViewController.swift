@@ -80,7 +80,7 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate {
         distanceField.font = Theme.monoFont(22, bold: true)
         distanceField.textAlignment = .center
         distanceField.keyboardType = .decimalPad
-        distanceField.keyboardAppearance = .dark
+        distanceField.keyboardAppearance = .light
         distanceField.layer.cornerRadius = 4
         distanceField.layer.borderWidth = 1
         distanceField.layer.borderColor = Theme.panelBorder.cgColor
@@ -106,7 +106,7 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate {
         for b in [minusButton, plusButton] { b.titleLabel?.font = Theme.font(28, bold: true) }
         for b in [reverseButton, forwardButton] {
             b.titleLabel?.font = Theme.font(22, bold: true)
-            b.onColor = Theme.accent
+            b.onColor = Theme.functionOn
         }
         minusButton.addTarget(self, action: #selector(minusTapped), for: .touchUpInside)
         plusButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
@@ -115,7 +115,7 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate {
         driveButton.addTarget(self, action: #selector(driveTapped), for: .touchUpInside)
         stopButton.addTarget(self, action: #selector(stopTapped), for: .touchUpInside)
         connectionLabel.font = Theme.font(13)
-        connectionLabel.textColor = Theme.functionOn
+        connectionLabel.textColor = Theme.red
         connectionLabel.numberOfLines = 0
         ([stepLabel, minusButton, plusButton, reverseButton, forwardButton, driveButton, stopButton, connectionLabel] as [UIView])
             .forEach { locoPanel.contentView.addSubview($0) }
@@ -241,7 +241,7 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate {
         let connected = client.connectionState == .connected
         driveButton.isEnabled = connected
         stopButton.isEnabled = connected
-        driveButton.markColor = isDriving ? UIColor.white : nil
+        driveButton.markColor = isDriving ? Theme.text : nil
         connectionLabel.text = connected ? nil
             : "Nicht mit der Z21 verbunden. Die Lok kann auch mit einem anderen Regler fahren, die Zeit wird hier gestoppt."
 

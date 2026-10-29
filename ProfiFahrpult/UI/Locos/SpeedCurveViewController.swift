@@ -235,7 +235,7 @@ final class SpeedCurveGraphView: UIView {
             grid.move(to: p)
             grid.addLine(to: CGPoint(x: plot.maxX, y: p.y))
             grid.lineWidth = 1
-            Theme.rgb(0x33373D).setStroke()
+            Theme.rgb(0xA9BAD6).setStroke()
             grid.stroke()
             let text = "\(Int(y))" as NSString
             let size = text.size(withAttributes: labelAttrs)

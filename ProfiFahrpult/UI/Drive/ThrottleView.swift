@@ -1,6 +1,8 @@
 import UIKit
 
-/// Ein Fahrregler im Stil der ECoS: Lokbild, Tacho-Drehregler, Richtung und Funktionstasten.
+/// Ein Fahrregler wie auf dem Display der ECoS: Lokname mit Unterstrich, darunter
+/// Richtungstasten links/rechts neben dem Lokbild, der schwarze Tacho mit gelbem Zeiger,
+/// Funktionstasten und unten die blaue Tastenleiste mit „Lok wählen“ und den Funktionsseiten.
 final class ThrottleView: PanelView, Z21ClientObserver {
 
     let index: Int
@@ -16,10 +18,9 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private let client = Z21Client.shared
 
     private let locoImage = LocoImageView()
-    private let nameLabel = UILabel()
     private let infoLabel = UILabel()
     private let busyLabel = UILabel()
-    private let selectButton = ECoSButton(title: "Lok wählen", style: .accent)
+    private let selectButton = ECoSButton(title: "Lok wählen", style: .normal)
     private let swapButton = ECoSButton(title: "⇄", style: .normal)
     private let tacho = TachometerView()
     private let reverseButton = ECoSButton(title: "◀", style: .normal)
@@ -30,6 +31,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private var functionKeys: [FunctionKey] = []
     private var pageButtons: [ECoSButton] = []
     private let separator = UIView()
+    private let bottomBar = UIView()
 
     private static let keysPerPage = 12
     private static let pages = [(0, 11), (12, 23), (24, 31)]
@@ -41,7 +43,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     init(index: Int) {
         self.index = index
-        super.init(title: "Regler \(index + 1)")
+        super.init(title: "Fahrregler \(index + 1)")
+        titleLabel.font = Theme.font(16, bold: true)
         setupViews()
         client.addObserver(self)
     }
@@ -57,23 +60,22 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     // MARK: Aufbau
 
     private func setupViews() {
-        nameLabel.font = Theme.font(22, bold: true)
-        nameLabel.textColor = Theme.text
-        nameLabel.adjustsFontSizeToFitWidth = true
-        nameLabel.minimumScaleFactor = 0.6
         infoLabel.font = Theme.font(13)
         infoLabel.textColor = Theme.textDim
+        infoLabel.adjustsFontSizeToFitWidth = true
+        infoLabel.minimumScaleFactor = 0.7
         busyLabel.font = Theme.font(12, bold: true)
-        busyLabel.textColor = Theme.functionOn
+        busyLabel.textColor = Theme.red
         busyLabel.isHidden = true
         separator.backgroundColor = Theme.panelBorder
+        bottomBar.backgroundColor = Theme.bar
 
-        ([locoImage, nameLabel, infoLabel, busyLabel, selectButton, swapButton, tacho,
+        ([bottomBar, locoImage, infoLabel, busyLabel, selectButton, swapButton, tacho,
           reverseButton, minusButton, haltButton, plusButton, forwardButton, separator] as [UIView]).forEach {
             contentView.addSubview($0)
         }
 
-        selectButton.titleLabel?.font = Theme.font(14, bold: true)
+        selectButton.titleLabel?.font = Theme.font(13, bold: true)
         selectButton.addTarget(self, action: #selector(selectTapped), for: .touchUpInside)
         swapButton.titleLabel?.font = Theme.font(22, bold: true)
         swapButton.addTarget(self, action: #selector(swapTapped), for: .touchUpInside)
@@ -84,8 +86,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         tacho.addTarget(self, action: #selector(tachoEnded), for: .editingDidEnd)
 
         for b in [reverseButton, forwardButton] {
-            b.titleLabel?.font = Theme.font(24, bold: true)
-            b.onColor = Theme.accent
+            b.titleLabel?.font = Theme.font(22, bold: true)
+            b.onColor = Theme.functionOn
         }
         for b in [minusButton, plusButton] {
             b.titleLabel?.font = Theme.font(28, bold: true)
@@ -112,7 +114,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         for (i, page) in ThrottleView.pages.enumerated() {
             let b = ECoSButton(title: "F\(page.0)–F\(page.1)", style: .normal)
             b.titleLabel?.font = Theme.font(13, bold: true)
-            b.onColor = Theme.accent
+            b.onColor = Theme.functionOn
             b.tag = i
             b.addTarget(self, action: #selector(pageTapped(_:)), for: .touchUpInside)
             contentView.addSubview(b)
@@ -128,57 +130,53 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         let pad: CGFloat = 10
         let gap: CGFloat = 8
 
-        // Kopfzeile
-        let headerH: CGFloat = 64
-        let imgW = min(130, w * 0.3)
-        locoImage.frame = CGRect(x: pad, y: pad, width: imgW, height: headerH - 6)
-        let selW = min(120, w * 0.28)
-        selectButton.frame = CGRect(x: w - pad - selW, y: pad + 8, width: selW, height: 42)
-        swapButton.frame = CGRect(x: selectButton.frame.minX - 6 - 44, y: pad + 8, width: 44, height: 42)
-        let textX = locoImage.frame.maxX + 10
-        let textW = swapButton.frame.minX - 8 - textX
-        nameLabel.frame = CGRect(x: textX, y: pad, width: textW, height: 28)
-        infoLabel.frame = CGRect(x: textX, y: pad + 28, width: textW, height: 18)
-        busyLabel.frame = CGRect(x: textX, y: pad + 45, width: textW, height: 16)
+        // Kopfzeile: ◀ Lokbild ▶, darunter Adresse und Hinweise
+        let headerH: CGFloat = 46
+        let dirW = min(70, max(50, floor(w * 0.17)))
+        reverseButton.frame = CGRect(x: pad, y: pad, width: dirW, height: headerH)
+        forwardButton.frame = CGRect(x: w - pad - dirW, y: pad, width: dirW, height: headerH)
+        let imgX = reverseButton.frame.maxX + gap
+        locoImage.frame = CGRect(x: imgX, y: pad, width: forwardButton.frame.minX - gap - imgX, height: headerH)
+        infoLabel.frame = CGRect(x: pad, y: locoImage.frame.maxY + 4, width: w - 2 * pad, height: 18)
+        busyLabel.frame = CGRect(x: pad, y: infoLabel.frame.maxY, width: w - 2 * pad, height: 16)
 
-        // Funktionstasten unten
+        // Blaue Tastenleiste unten: Lok wählen, ⇄ und Funktionsseiten
+        let barH: CGFloat = 50
+        bottomBar.frame = CGRect(x: 0, y: h - barH, width: w, height: barH)
+        let swapW: CGFloat = 44
+        let barButtons = [selectButton] + pageButtons
+        let bw = floor((w - 2 * pad - swapW - CGFloat(barButtons.count) * gap) / CGFloat(barButtons.count))
+        var x = pad
+        for b in [selectButton, swapButton] + pageButtons {
+            let bWidth = b === swapButton ? swapW : bw
+            b.frame = CGRect(x: x, y: h - barH + 7, width: bWidth, height: barH - 14)
+            x += bWidth + gap
+        }
+
+        // Funktionstasten
         let cols: CGFloat = 4
         let keyW = floor((w - 2 * pad - (cols - 1) * gap) / cols)
-        let keyH = max(44, min(58, floor(keyW * 0.6)))
-        let pageH: CGFloat = 36
+        let keyH = max(44, min(52, floor(keyW * 0.6)))
         let rows: CGFloat = 3
-        let fnHeight = rows * keyH + (rows - 1) * gap + gap + pageH
-        let fnTop = h - pad - fnHeight
+        let fnTop = h - barH - pad - (rows * keyH + (rows - 1) * gap)
         for (i, key) in functionKeys.enumerated() {
             let col = CGFloat(i % 4)
             let row = CGFloat(i / 4)
             key.frame = CGRect(x: pad + col * (keyW + gap), y: fnTop + row * (keyH + gap), width: keyW, height: keyH)
         }
-        let pageW = floor((w - 2 * pad - 2 * gap) / 3)
-        for (i, b) in pageButtons.enumerated() {
-            b.frame = CGRect(x: pad + CGFloat(i) * (pageW + gap), y: h - pad - pageH, width: pageW, height: pageH)
-        }
         separator.frame = CGRect(x: pad, y: fnTop - gap, width: w - 2 * pad, height: 1)
 
-        // Bedienzeile über den Funktionen
-        let ctrlH: CGFloat = 52
+        // − HALT + über den Funktionen
+        let ctrlH: CGFloat = 48
         let ctrlTop = fnTop - 2 * gap - ctrlH
-        let smallW = floor((w - 2 * pad - 4 * gap) / 5)
-        let haltW = w - 2 * pad - 4 * gap - 4 * smallW
-        var x = pad
-        for b in [reverseButton, minusButton] {
-            b.frame = CGRect(x: x, y: ctrlTop, width: smallW, height: ctrlH)
-            x += smallW + gap
-        }
-        haltButton.frame = CGRect(x: x, y: ctrlTop, width: haltW, height: ctrlH)
-        x += haltW + gap
-        for b in [plusButton, forwardButton] {
-            b.frame = CGRect(x: x, y: ctrlTop, width: smallW, height: ctrlH)
-            x += smallW + gap
-        }
+        let smallW = floor((w - 2 * pad - 2 * gap) / 4)
+        let haltW = w - 2 * pad - 2 * gap - 2 * smallW
+        minusButton.frame = CGRect(x: pad, y: ctrlTop, width: smallW, height: ctrlH)
+        haltButton.frame = CGRect(x: minusButton.frame.maxX + gap, y: ctrlTop, width: haltW, height: ctrlH)
+        plusButton.frame = CGRect(x: haltButton.frame.maxX + gap, y: ctrlTop, width: smallW, height: ctrlH)
 
         // Tacho füllt den Rest
-        let tachoTop = pad + headerH + 4
+        let tachoTop = busyLabel.frame.maxY + 2
         let avail = max(80, ctrlTop - gap - tachoTop)
         let size = min(w - 2 * pad, avail)
         tacho.frame = CGRect(x: (w - size) / 2, y: tachoTop + (avail - size) / 2, width: size, height: size)
@@ -189,11 +187,12 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     func setLoco(_ loco: Locomotive?) {
         self.loco = loco
         let active = loco != nil
-        nameLabel.text = loco?.name ?? "Keine Lok"
+        title = loco?.name ?? "Fahrregler \(index + 1) – keine Lok"
         locoImage.image = loco.flatMap { LocoStore.shared.image(for: $0) }
         locoImage.isDimmed = !active
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120
         tacho.maxStep = (loco?.speedSteps ?? .steps128).maxStep
+        tacho.addressText = loco.map { String(format: "[%04d]", Int($0.address)) }
         tacho.speedCurve = loco?.speedCurve
         tacho.isActive = active
         tacho.isEnabled = active

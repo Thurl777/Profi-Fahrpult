@@ -46,7 +46,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
             tf.textAlignment = .right
             tf.delegate = self
             tf.clearButtonMode = .whileEditing
-            tf.keyboardAppearance = .dark
+            tf.keyboardAppearance = .light
         }
         nameField.text = loco.name
         nameField.autocapitalizationType = .words
@@ -244,7 +244,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
             let f = loco.function(indexPath.row)
             cell.textLabel?.text = "F\(f.index)   \(f.name)"
             cell.detailTextLabel?.text = f.momentary ? "Moment" : "Dauer"
-            cell.imageView?.image = FunctionIconRenderer.image(f.icon, size: 28, color: .white) ?? blankIcon()
+            cell.imageView?.image = FunctionIconRenderer.image(f.icon, size: 28, color: Theme.text) ?? blankIcon()
             cell.accessoryType = .disclosureIndicator
             return cell
         case .actions:
@@ -374,7 +374,7 @@ final class FunctionEditViewController: UITableViewController, UITextFieldDelega
         nameField.textColor = Theme.text
         nameField.textAlignment = .right
         nameField.delegate = self
-        nameField.keyboardAppearance = .dark
+        nameField.keyboardAppearance = .light
         nameField.addTarget(self, action: #selector(nameChanged), for: .editingChanged)
         momentarySwitch.isOn = function.momentary
         momentarySwitch.addTarget(self, action: #selector(momentaryChanged), for: .valueChanged)
@@ -421,7 +421,7 @@ final class FunctionEditViewController: UITableViewController, UITextFieldDelega
         } else {
             let icon = icons[indexPath.row]
             cell.textLabel?.text = icon.title
-            cell.imageView?.image = FunctionIconRenderer.image(icon, size: 30, color: Theme.functionOn)
+            cell.imageView?.image = FunctionIconRenderer.image(icon, size: 30, color: Theme.text)
             cell.accessoryType = icon == function.icon ? .checkmark : .none
         }
         return cell
