@@ -38,12 +38,20 @@ final class SpeedCurveViewController: UITableViewController {
         refresh()
     }
 
+    /// Schützt vor einer Endlosschleife: `tableHeaderView` neu zu setzen kann selbst einen
+    /// weiteren Layout-Durchlauf auslösen (u.a. beim Zurück-Navigieren), was ohne diese Sperre
+    /// und eine Toleranz gegen Rundungsjitter die App dauerhaft blockiert hat.
+    private var isUpdatingHeader = false
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        if graph.frame.width != tableView.bounds.width {
-            graph.frame.size.width = tableView.bounds.width
-            tableView.tableHeaderView = graph
-        }
+        guard !isUpdatingHeader else { return }
+        let targetWidth = tableView.bounds.width
+        guard targetWidth > 0, abs(graph.frame.width - targetWidth) > 0.5 else { return }
+        isUpdatingHeader = true
+        graph.frame.size.width = targetWidth
+        tableView.tableHeaderView = graph
+        isUpdatingHeader = false
     }
 
     private func refresh() {
@@ -75,7 +83,7 @@ final class SpeedCurveViewController: UITableViewController {
         if section == Section.points.rawValue {
             return "Fahrstufe 0 ist immer 0 km/h. Über dem höchsten Messpunkt wird mit der Steigung der letzten Strecke weitergerechnet."
         }
-        return "Mit Maßband und Stoppuhr: Die Lok fährt eine bekannte Strecke, die App rechnet die Maßstabsgeschwindigkeit aus."
+        return "Mit drei Belegtmeldern auf einem Messgleis: Die Lok fährt darüber, die App misst die Zeit zwischen den Meldern und rechnet die Maßstabsgeschwindigkeit aus – einzeln je Fahrstufe oder automatisch für mehrere."
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -92,7 +100,7 @@ final class SpeedCurveViewController: UITableViewController {
                 cell.textLabel?.textColor = Theme.accent
             }
         } else if indexPath.row == 0 {
-            cell.textLabel?.text = "Einmessen mit Stoppuhr …"
+            cell.textLabel?.text = "Einmessen mit Belegtmeldern …"
             cell.textLabel?.textColor = Theme.accent
             cell.accessoryType = .disclosureIndicator
         } else {
@@ -235,7 +243,7 @@ final class SpeedCurveGraphView: UIView {
             grid.move(to: p)
             grid.addLine(to: CGPoint(x: plot.maxX, y: p.y))
             grid.lineWidth = 1
-            Theme.rgb(0xA9BAD6).setStroke()
+            Theme.rgb(0xB4B7BD).setStroke()
             grid.stroke()
             let text = "\(Int(y))" as NSString
             let size = text.size(withAttributes: labelAttrs)

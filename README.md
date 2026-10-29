@@ -12,8 +12,8 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 
 | Bereich | Inhalt |
 |---|---|
-| **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung), ±1-Fahrstufe, Richtung, HALT (lange drücken = Nothalt der Lok), Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“, Kopplung mit zwei Multimäusen (siehe unten) |
-| **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Geschwindigkeitsanzeige (km/h bei höchster Fahrstufe oder eingemessene Messpunkte), Einmess-Hilfe mit Stoppuhr, Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
+| **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung, lange drücken = Nothalt der Lok), optionaler Schieberegler an der Außenseite jedes Reglers, Richtung, Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, Lokeinstellungen direkt aus dem Fahrregler, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“, Kopplung mit zwei Multimäusen (siehe unten) |
+| **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Geschwindigkeitsanzeige (km/h bei höchster Fahrstufe oder eingemessene Messpunkte), Einmessen mit drei Belegtmeldern (einzeln oder automatisch), Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
 | **Stellpult** | 16 Magnetartikel pro Seite, Adressen 1–2048, rote/grüne Taste, Weichen links/rechts, Signale, Entkuppler, Licht; Rückmeldung der Stellung; Name und Rot/Grün-Tausch per langem Drücken |
 | **Melder** | R-Bus-Rückmelder, Module 1–20 mit je 8 Eingängen, Live-Anzeige |
 | **Prog.** | CV lesen/schreiben auf dem Programmiergleis, POM (Hauptgleis) schreiben/lesen, Bit-Ansicht, Lokadresse lesen/schreiben (kurz und lang, inkl. CV29) |
@@ -23,8 +23,10 @@ Aussehen und Farben entsprechen dem Display der ESU ECoS: oben die blaue Menüle
 (die gewählte leuchtet gelb), links daneben STOP und rechts GO, deren Rahmen wie die LEDs der ECoS
 leuchten. Darunter eine Statuszeile mit Verbindung, Gleisstatus (Gleisspannung ein/aus, Nothalt,
 Kurzschluss, Programmiermodus) und Uhrzeit. Unter „Fahren“ stehen im Hoch- und Querformat die beiden
-Fahrregler nebeneinander: Lokname, ◀ Lokbild ▶, schwarzer Tacho mit gelbem Zeiger, Funktionstasten und
-die blaue Tastenleiste mit „Lok wählen“.
+Fahrregler nebeneinander: Lokname, ◀ Lokbild ▶ (Tippen auf das Bild wählt die Lok), schwarzer Tacho mit
+gelbem Zeiger, beim linken Regler links und beim rechten Regler rechts ein Schieberegler mit Strichskala
+(abschaltbar unter *System → Einstellungen → Schieberegler neben Tacho anzeigen*), Funktionstasten und
+die blaue Tastenleiste mit ⇄ (Regler tauschen), Schraubenschlüssel (Lokeinstellungen) und den Funktionsseiten.
 
 ![Querformat](docs/mockup/querformat.png)
 
@@ -38,13 +40,22 @@ gibt es zwei Wege:
 - **Messpunkte:** Beliebig viele Paare „Fahrstufe → km/h“. Zwischen den Punkten wird gerechnet,
   über dem höchsten Punkt mit der Steigung der letzten Strecke weiter. Die Grafik zeigt die Kennlinie.
 
-Die **Einmess-Hilfe** (*Messpunkte und Einmessen → Einmessen mit Stoppuhr*):
+Die **Einmess-Hilfe** (*Messpunkte und Einmessen → Einmessen mit Belegtmeldern*) arbeitet wie die
+Messung mit Dauerkontakten in iTrain:
 
-1. Maßstab wählen (Z, N, TT, H0, S, 0, 1, G) und die Länge der Messstrecke in cm eingeben.
-2. Fahrstufe einstellen und „Lok fahren“ tippen (oder die Lok mit einem anderen Regler fahren).
-3. Beim Überfahren der ersten Marke START, bei der zweiten ZIEL tippen. Mehrere Läufe, z. B. hin
-   und zurück, werden gemittelt.
-4. „Als Messpunkt übernehmen“ – fertig. Für eine gute Kennlinie 4–6 Fahrstufen über den Bereich verteilt messen.
+1. Einmalig das Messgleis einrichten (*System → Einstellungen → Messgleis* oder direkt in der
+   Einmess-Hilfe): drei Belegtmelder hintereinander auf einem geraden Gleisstück, Adressen
+   links/Mitte/rechts (R-Bus 1–160, wie unter „Melder“) und die beiden Abstände in cm.
+2. Maßstab wählen (Z, N, TT, H0, S, 0, 1, G).
+3. **Einzeln:** Fahrstufe einstellen, „Lok fahren“ – jede Durchfahrt über die drei Melder wird
+   automatisch gemessen (beide Abschnitte gemittelt, in beide Richtungen). Mehrere Durchfahrten
+   werden gemittelt, dann „Als Messpunkt übernehmen“.
+4. **Automatisch:** Bereich (von/bis Fahrstufe) und Schrittweite eingeben, „Automatik starten“.
+   Die Lok fährt jede Fahrstufe vorwärts durch die Messstrecke, der Messpunkt wird übernommen, dann
+   fährt sie rückwärts hinter den linken Melder zurück und nimmt die nächste Fahrstufe.
+   „Lok anhalten / Abbrechen“ beendet die Automatik jederzeit.
+
+Messpunkte von Hand eingeben geht weiterhin wie bisher.
 
 Rechnung: km/h = Strecke (m) ÷ Zeit (s) × 3,6 × Maßstab. Beispiel H0: 1 m in 4,5 s = 69,6 km/h.
 

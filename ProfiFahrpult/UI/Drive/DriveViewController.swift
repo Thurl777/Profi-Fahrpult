@@ -17,6 +17,9 @@ final class DriveViewController: UIViewController {
             t.onSwap = {
                 AppSettings.shared.swapThrottleLocos()
             }
+            t.onEditLoco = { [weak self] _, loco in
+                self?.editLoco(loco)
+            }
             t.onUserActivity = { [weak self] throttle in
                 self?.follower.noteAppUse(throttle: throttle.index)
             }
@@ -51,6 +54,14 @@ final class DriveViewController: UIViewController {
                 t.setLoco(loco)
             }
         }
+    }
+
+    /// Öffnet die Lokeinstellungen (Messpunkte, Funktionen, …) direkt aus dem Fahrbildschirm
+    private func editLoco(_ loco: Locomotive) {
+        let editor = LocoEditViewController(loco: loco, isNew: false)
+        let nav = UINavigationController(rootViewController: editor)
+        nav.modalPresentationStyle = .formSheet
+        present(nav, animated: true, completion: nil)
     }
 
     private func showPicker(for throttle: ThrottleView, from source: UIView) {

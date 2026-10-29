@@ -1,8 +1,8 @@
 import UIKit
 
 /// Farben und Schriften der ESU ECoS (Bedienoberfläche ab Software 3/4), abgenommen vom
-/// Display der ECoS 50200/50210: hellblaue Flächen, blaue Menüleiste, dunkelblaue Tasten mit
-/// weißem Rand, gelbe Markierung für die Auswahl, schwarze Tachos mit gelbem Zeiger.
+/// Display der ECoS 50200/50210: hellgraue Felder, kräftig blaue Leisten, anthrazitfarbene
+/// Tasten mit hellem Rand, gelbe Markierung für die Auswahl, schwarze Tachos mit gelbem Zeiger.
 enum Theme {
 
     static func rgb(_ hex: UInt32, alpha: CGFloat = 1) -> UIColor {
@@ -13,48 +13,48 @@ enum Theme {
     }
 
     /// Bildschirmhintergrund zwischen den Feldern
-    static let background = rgb(0xB7CCE7)
-    static let panelTop = rgb(0xE4EEF9)
-    static let panelBottom = rgb(0xC9DAEF)
-    static let panelBorder = rgb(0x8EA6CF)
+    static let background = rgb(0xBFC3C9)
+    static let panelTop = rgb(0xEBECEE)
+    static let panelBottom = rgb(0xD3D5D9)
+    static let panelBorder = rgb(0x8E9299)
     /// Eingabefelder und Lokbild
-    static let inset = rgb(0xF6F9FD)
+    static let inset = rgb(0xFAFAFB)
 
     /// Navigationsleisten (blau wie die Menüleiste)
-    static let titleTop = rgb(0x7EAAE3)
-    static let titleBottom = rgb(0x4F82CB)
+    static let titleTop = rgb(0x4C8AD9)
+    static let titleBottom = rgb(0x2D66B8)
     /// Unterstrich unter den Feldüberschriften
-    static let titleLine = rgb(0x5C6A90)
+    static let titleLine = rgb(0x2B2D31)
 
     /// Menüleiste oben
-    static let menuTop = rgb(0x8DB8EC)
-    static let menuBottom = rgb(0x5A8ED4)
+    static let menuTop = rgb(0x4C8AD9)
+    static let menuBottom = rgb(0x2D66B8)
     /// Statusleiste und Tastenleiste unter den Fahrreglern
-    static let bar = rgb(0x4A66B8)
+    static let bar = rgb(0x2D66B8)
 
-    /// Dunkelblaue Taste mit weißem Rand (wie SELECT oder der Schraubenschlüssel)
-    static let buttonTop = rgb(0x48507F)
-    static let buttonBottom = rgb(0x23284A)
-    static let buttonBorder = rgb(0xE8EEF8)
-    static let buttonPressedTop = rgb(0x2C3360)
-    static let buttonPressedBottom = rgb(0x161A33)
+    /// Anthrazitfarbene Taste mit hellem Rand (wie SELECT oder der Schraubenschlüssel)
+    static let buttonTop = rgb(0x585B61)
+    static let buttonBottom = rgb(0x2A2C30)
+    static let buttonBorder = rgb(0xE4E5E8)
+    static let buttonPressedTop = rgb(0x3A3C41)
+    static let buttonPressedBottom = rgb(0x18191C)
     /// Helle Taste (Funktionen)
-    static let lightTop = rgb(0xFBFDFF)
-    static let lightBottom = rgb(0xD3DFEF)
+    static let lightTop = rgb(0xFCFCFD)
+    static let lightBottom = rgb(0xD5D7DB)
 
-    static let accent = rgb(0x2A5BB0)
+    static let accent = rgb(0x2D66B8)
     /// Gelb für Auswahl, Fahrtrichtung und eingeschaltete Funktionen
-    static let functionOn = rgb(0xF3E84A)
-    static let functionOnDark = rgb(0xB8A51E)
+    static let functionOn = rgb(0xF5E21B)
+    static let functionOnDark = rgb(0xB3A20D)
 
     static let red = rgb(0xD9261C)
     static let redDark = rgb(0x8A1009)
     static let green = rgb(0x2DB843)
     static let greenDark = rgb(0x146B22)
 
-    static let text = rgb(0x1C2340)
-    static let textDim = rgb(0x4D5675)
-    static let textDark = rgb(0x8C94AB)
+    static let text = rgb(0x1B1C1F)
+    static let textDim = rgb(0x4A4D54)
+    static let textDark = rgb(0x8E9197)
 
     static func font(_ size: CGFloat, bold: Bool = false) -> UIFont {
         return bold ? UIFont.boldSystemFont(ofSize: size) : UIFont.systemFont(ofSize: size)
@@ -240,7 +240,7 @@ class ECoSButton: UIButton {
         case .light: top = Theme.lightTop; bottom = Theme.lightBottom
         case .red: top = Theme.red; bottom = Theme.redDark
         case .green: top = Theme.green; bottom = Theme.greenDark
-        case .accent: top = Theme.rgb(0x5B78C8); bottom = Theme.rgb(0x2F4790)
+        case .accent: top = Theme.titleTop; bottom = Theme.titleBottom
         case .key: top = Theme.rgb(0x3A3D44); bottom = Theme.rgb(0x101114)
         }
         if isOn {
