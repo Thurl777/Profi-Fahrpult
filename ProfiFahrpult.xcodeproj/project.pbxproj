@@ -26,23 +26,29 @@
 		B3A0832BEAF56274E056EF13 /* FeedbackViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331EA03943D871FB4DC4C2A6 /* FeedbackViewController.swift */; };
 		B5598F0C3B101C879FBF7689 /* LocoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1123CB695FD57C7FCB5D644 /* LocoStore.swift */; };
 		B8BC7E366ECDDE115CE009E6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29250EB09DD46F8A9296CFFB /* MainViewController.swift */; };
+		BE653B871A4AD4FC432D4ED6 /* SpeedMeasureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 220F7B59FDE7D058C779E5D9 /* SpeedMeasureViewController.swift */; };
 		C424E27BD6D942F141A276B6 /* UDPSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCBA9FE2B933D268CCAA2F2 /* UDPSocket.swift */; };
 		CBF0C5E4AD7C58EA892EB66E /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F971F5D662DF8C9C320713F1 /* Theme.swift */; };
 		D2EF3A871E00821896E10D49 /* TachometerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1EC545C84156E4AE4C98FF /* TachometerView.swift */; };
 		DA1027285BB45223CE64DD4B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE34930D227E482E93E67557 /* AppDelegate.swift */; };
 		E88804BA5F236B5D28BC205C /* Z21Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831E83C149110CAA76CC7F0E /* Z21Protocol.swift */; };
+		F493280AB5638DC51BCEF09E /* SpeedCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */; };
+		F5AAB596A107677D1A3170B0 /* SpeedCurveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A71E85E5F9DFA0A8D7A08CD /* SpeedCurveViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		112BAB6350D8E37DD8ECDA86 /* ThrottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrottleView.swift; sourceTree = "<group>"; };
 		20A80B4E6F8EF92ADB1DA24C /* LocoListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocoListViewController.swift; sourceTree = "<group>"; };
+		220F7B59FDE7D058C779E5D9 /* SpeedMeasureViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedMeasureViewController.swift; sourceTree = "<group>"; };
 		2450CBF337416F082E4A9700 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		29250EB09DD46F8A9296CFFB /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2C89F6B46FC862EA8E5F1550 /* LocoEditViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocoEditViewController.swift; sourceTree = "<group>"; };
 		331EA03943D871FB4DC4C2A6 /* FeedbackViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackViewController.swift; sourceTree = "<group>"; };
 		38F411C9FBFB06C538046734 /* SystemViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemViewController.swift; sourceTree = "<group>"; };
+		3A71E85E5F9DFA0A8D7A08CD /* SpeedCurveViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedCurveViewController.swift; sourceTree = "<group>"; };
 		3E8E9BD8D26DBE236FCC8170 /* Locomotive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locomotive.swift; sourceTree = "<group>"; };
 		41E654CDBB359AF53913894B /* AccessoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryStore.swift; sourceTree = "<group>"; };
+		450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedCurve.swift; sourceTree = "<group>"; };
 		49EC60C2DB1B0E6B268FFDFB /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5C9E1FC48CF5723117EF967A /* Z21Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Z21Client.swift; sourceTree = "<group>"; };
 		60772290B5ABBCDB450DE1F0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -78,6 +84,7 @@
 			children = (
 				962ACF6665120C29BFC32407 /* App */,
 				60772290B5ABBCDB450DE1F0 /* Assets.xcassets */,
+				1BA6D41A357A836961400EA7 /* Core */,
 				01D0E108B6BA987BEDCE5C90 /* Model */,
 				B019290CC954875B272D69E1 /* UI */,
 				B5677C189678F0C50C127153 /* Z21 */,
@@ -93,6 +100,14 @@
 				49EC60C2DB1B0E6B268FFDFB /* LaunchScreen.storyboard */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		1BA6D41A357A836961400EA7 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */,
+			);
+			path = Core;
 			sourceTree = "<group>";
 		};
 		01D0E108B6BA987BEDCE5C90 /* Model */ = {
@@ -155,6 +170,8 @@
 			children = (
 				2C89F6B46FC862EA8E5F1550 /* LocoEditViewController.swift */,
 				20A80B4E6F8EF92ADB1DA24C /* LocoListViewController.swift */,
+				3A71E85E5F9DFA0A8D7A08CD /* SpeedCurveViewController.swift */,
+				220F7B59FDE7D058C779E5D9 /* SpeedMeasureViewController.swift */,
 			);
 			path = Locos;
 			sourceTree = "<group>";
@@ -280,6 +297,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DA1027285BB45223CE64DD4B /* AppDelegate.swift in Sources */,
+				F493280AB5638DC51BCEF09E /* SpeedCurve.swift in Sources */,
 				36B7FBE07CBB2E1E0D85D9A2 /* AccessoryStore.swift in Sources */,
 				6C6C4018A31DAF7CEABBC321 /* AppSettings.swift in Sources */,
 				B5598F0C3B101C879FBF7689 /* LocoStore.swift in Sources */,
@@ -293,6 +311,8 @@
 				B3A0832BEAF56274E056EF13 /* FeedbackViewController.swift in Sources */,
 				3A359F4AA2F5F00C87A78B54 /* LocoEditViewController.swift in Sources */,
 				2E60302E295C9D193E717B07 /* LocoListViewController.swift in Sources */,
+				F5AAB596A107677D1A3170B0 /* SpeedCurveViewController.swift in Sources */,
+				BE653B871A4AD4FC432D4ED6 /* SpeedMeasureViewController.swift in Sources */,
 				B8BC7E366ECDDE115CE009E6 /* MainViewController.swift in Sources */,
 				1F8BF5ED7DBB7D3CE5C44184 /* ProgramViewController.swift in Sources */,
 				7AF6837F1F397F77C56CEF7E /* SwitchboardViewController.swift in Sources */,

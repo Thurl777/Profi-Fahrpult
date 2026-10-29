@@ -62,8 +62,10 @@ struct Locomotive: Codable, Equatable {
     var name: String
     var address: UInt16
     var speedSteps: SpeedSteps
-    /// Höchstgeschwindigkeit für die Skala des Tachos
+    /// Maßstabsgeschwindigkeit bei der höchsten Fahrstufe (gilt, solange keine Messpunkte vorhanden sind)
     var maxSpeedKmh: Int
+    /// Eingemessene Geschwindigkeiten; optional, damit ältere Lokdateien weiter geladen werden
+    var speedPoints: [SpeedPoint]?
     /// Dateiname des Lokbildes im Dokumentenordner
     var imageFile: String?
     var functions: [LocoFunction]
@@ -94,6 +96,11 @@ struct Locomotive: Codable, Equatable {
             list.append(LocoFunction(index: i, name: name, icon: icon, momentary: i == 2))
         }
         return list
+    }
+
+    /// Umrechnung Fahrstufe -> km/h für Tacho und Lokliste
+    var speedCurve: SpeedCurve {
+        return SpeedCurve(points: speedPoints ?? [], maxStep: speedSteps.maxStep, fallbackMaxKmh: Double(maxSpeedKmh))
     }
 
     func function(_ index: Int) -> LocoFunction {
