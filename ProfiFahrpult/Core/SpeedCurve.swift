@@ -4,6 +4,10 @@ import Foundation
 /// Die Fahrstufe wird relativ (0…1) gespeichert, damit die Punkte beim Wechsel
 /// zwischen 14, 28 und 128 Fahrstufen erhalten bleiben.
 public struct SpeedPoint: Codable, Equatable {
+    /// Höchste Maßstabsgeschwindigkeit, die als Messwert akzeptiert wird. Höhere Werte stammen
+    /// von Fehlauslösungen (z.B. zwei Melder im selben Augenblick) und werden ignoriert.
+    public static let maxKmh: Double = 1000
+
     public var fraction: Double
     /// Maßstabsgeschwindigkeit in km/h
     public var kmh: Double
@@ -30,9 +34,9 @@ public struct SpeedCurve: Equatable {
     public let fallbackMaxKmh: Double
 
     public init(points: [SpeedPoint], maxStep: Int, fallbackMaxKmh: Double) {
-        // nach Fahrstufe sortieren, Fahrstufe 0 ignorieren, doppelte Fahrstufen: letzter Wert gilt
+        // nach Fahrstufe sortieren, Fahrstufe 0 und unplausible Werte ignorieren, doppelte Fahrstufen: letzter Wert gilt
         var byFraction: [Double: SpeedPoint] = [:]
-        for p in points where p.fraction > 0 {
+        for p in points where p.fraction > 0 && p.kmh.isFinite && p.kmh < SpeedPoint.maxKmh {
             byFraction[p.fraction] = p
         }
         self.points = byFraction.values.sorted { $0.fraction < $1.fraction }
@@ -64,7 +68,7 @@ public struct SpeedCurve: Equatable {
         let before = points.count >= 2 ? points[points.count - 2] : SpeedPoint(fraction: 0, kmh: 0)
         let span = last.fraction - before.fraction
         let slope = span > 0 ? max(0, (last.kmh - before.kmh) / span) : 0
-        return last.kmh + slope * (f - last.fraction)
+        return min(SpeedPoint.maxKmh, last.kmh + slope * (f - last.fraction))
     }
 
     /// Geschwindigkeit bei der höchsten Fahrstufe

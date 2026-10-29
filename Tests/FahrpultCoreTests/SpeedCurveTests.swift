@@ -61,6 +61,20 @@ final class SpeedCurveTests: XCTestCase {
         XCTAssertEqual(curve.kmh(atStep: 63), 40, accuracy: 0.001)
     }
 
+    func testImplausiblePointsAreIgnored() {
+        // Fehlmessung mit 150 Mio. km/h darf Tacho und Grafik nicht sprengen
+        let curve = SpeedCurve(points: [SpeedPoint(step: 40, maxStep: 126, kmh: 1.5e8),
+                                        SpeedPoint(step: 63, maxStep: 126, kmh: 40)],
+                               maxStep: 126, fallbackMaxKmh: 0)
+        XCTAssertEqual(curve.points.count, 1)
+        XCTAssertEqual(curve.topSpeed, 80, accuracy: 0.001)
+
+        // steile Extrapolation wird begrenzt
+        let steep = SpeedCurve(points: [SpeedPoint(step: 1, maxStep: 126, kmh: 900)], maxStep: 126, fallbackMaxKmh: 0)
+        XCTAssertEqual(steep.topSpeed, SpeedPoint.maxKmh, accuracy: 0.001)
+        XCTAssertEqual(steep.scaleMax, 1000)
+    }
+
     func testScaleSpeed() {
         // 1 m in 4,5 s in H0: 0,2222 m/s * 3,6 * 87 = 69,6 km/h
         XCTAssertEqual(ModelScale.h0.scaleSpeed(distanceCm: 100, seconds: 4.5) ?? 0, 69.6, accuracy: 0.01)

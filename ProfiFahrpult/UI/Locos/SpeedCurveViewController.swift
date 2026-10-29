@@ -33,25 +33,12 @@ final class SpeedCurveViewController: UITableViewController {
         super.viewDidLoad()
         title = "Geschwindigkeit"
         tableView.backgroundColor = Theme.background
-        graph.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 240)
+        // Die Breite des Kopfbereichs passt die Tabelle selbst an. Ihn in viewDidLayoutSubviews
+        // neu zu setzen, löst jedes Mal einen weiteren Layout-Durchlauf aus und kann die App blockieren.
+        graph.frame = CGRect(x: 0, y: 0, width: max(tableView.bounds.width, 320), height: 240)
+        graph.autoresizingMask = [.flexibleWidth]
         tableView.tableHeaderView = graph
         refresh()
-    }
-
-    /// Schützt vor einer Endlosschleife: `tableHeaderView` neu zu setzen kann selbst einen
-    /// weiteren Layout-Durchlauf auslösen (u.a. beim Zurück-Navigieren), was ohne diese Sperre
-    /// und eine Toleranz gegen Rundungsjitter die App dauerhaft blockiert hat.
-    private var isUpdatingHeader = false
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        guard !isUpdatingHeader else { return }
-        let targetWidth = tableView.bounds.width
-        guard targetWidth > 0, abs(graph.frame.width - targetWidth) > 0.5 else { return }
-        isUpdatingHeader = true
-        graph.frame.size.width = targetWidth
-        tableView.tableHeaderView = graph
-        isUpdatingHeader = false
     }
 
     private func refresh() {
@@ -234,8 +221,8 @@ final class SpeedCurveGraphView: UIView {
 
         let labelAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(11, bold: true), .foregroundColor: Theme.textDim]
 
-        // Raster km/h
-        let yStep: Double = yMax <= 60 ? 10 : (yMax <= 160 ? 20 : 50)
+        // Raster km/h: höchstens 8 Linien, auch bei sehr hohen Werten (sonst endlos viele Linien)
+        let yStep = [10.0, 20, 50, 100, 200, 500].first { yMax / $0 <= 8 } ?? (yMax / 8).rounded(.up)
         var y = 0.0
         while y <= yMax + 0.001 {
             let p = pt(0, y)

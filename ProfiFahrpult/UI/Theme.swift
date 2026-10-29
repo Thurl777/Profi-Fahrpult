@@ -302,6 +302,24 @@ class ECoSButton: UIButton {
     }
 }
 
+/// Hält die Tabellenzellen, in denen ein Steuerelement (Schalter, Textfeld, Stepper …) als
+/// `accessoryView` steckt: Jedes Element bekommt genau eine Zelle, die bei jedem Neuladen
+/// wiederverwendet wird. Würde beim Neuladen einer Zeile eine neue Zelle erzeugt, steckte das
+/// Element kurz in zwei Zellen; beide holen es sich im Layout abwechselnd zurück, das Layout
+/// kommt nie zur Ruhe und die App hängt.
+final class ControlCellCache {
+
+    private var cells: [ObjectIdentifier: UITableViewCell] = [:]
+
+    func cell(for control: UIView, make: () -> UITableViewCell) -> UITableViewCell {
+        let key = ObjectIdentifier(control)
+        if let cell = cells[key] { return cell }
+        let cell = make()
+        cells[key] = cell
+        return cell
+    }
+}
+
 /// Runde Statusleuchte
 class StatusLED: UIView {
     var color: UIColor = Theme.textDark {

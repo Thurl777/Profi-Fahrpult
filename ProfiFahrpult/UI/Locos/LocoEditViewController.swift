@@ -14,6 +14,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     private let vmaxField = UITextField()
     private let stepsControl = UISegmentedControl(items: ["14 FS", "28 FS", "128 FS"])
     private let previewImage = LocoImageView()
+    private let controlCells = ControlCellCache()
 
     private enum Section: Int {
         case general = 0
@@ -67,7 +68,13 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         updateVmaxField()
-        tableView.reloadSections(IndexSet([Section.speed.rawValue, Section.functions.rawValue]), with: .none)
+        // Nur Zeilen ohne Eingabefeld neu laden (Anzahl Messpunkte, Funktionen)
+        tableView.reloadRows(at: [IndexPath(row: 1, section: Section.speed.rawValue)], with: .none)
+        tableView.reloadSections(IndexSet(integer: Section.functions.rawValue), with: .none)
+        if let footer = tableView.footerView(forSection: Section.speed.rawValue) {
+            footer.textLabel?.text = speedFooter
+            footer.setNeedsLayout()
+        }
     }
 
     /// Fahrstufen laut Auswahl (auch wenn noch nicht gespeichert)
@@ -186,6 +193,10 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         guard Section(rawValue: section) == .speed else { return nil }
+        return speedFooter
+    }
+
+    private var speedFooter: String {
         return hasMeasurements
             ? "Der Tacho zeigt die eingemessene Maßstabsgeschwindigkeit. Zwischen den Messpunkten wird gerechnet."
             : "Ohne Messpunkte wird gleichmäßig von 0 bis zu diesem Wert gerechnet."
@@ -197,13 +208,15 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     }
 
     private func fieldCell(_ title: String, _ field: UIView, width: CGFloat = 260) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        Theme.styleCell(cell)
-        cell.selectionStyle = .none
-        cell.textLabel?.text = title
-        field.frame = CGRect(x: 0, y: 0, width: width, height: 34)
-        cell.accessoryView = field
-        return cell
+        return controlCells.cell(for: field) {
+            let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            Theme.styleCell(cell)
+            cell.selectionStyle = .none
+            cell.textLabel?.text = title
+            field.frame = CGRect(x: 0, y: 0, width: width, height: 34)
+            cell.accessoryView = field
+            return cell
+        }
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {

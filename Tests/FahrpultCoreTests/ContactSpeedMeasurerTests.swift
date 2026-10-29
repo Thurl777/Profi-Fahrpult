@@ -53,6 +53,18 @@ final class ContactSpeedMeasurerTests: XCTestCase {
         XCTAssertNil(measurer.occupied(.left, at: 1.5))
     }
 
+    func testSimultaneousTriggersAreRejected() {
+        // Drei Melder im selben Augenblick (z.B. erste Rückmeldung der Z21): keine Fantasiegeschwindigkeit
+        let measurer = ContactSpeedMeasurer(distanceLeftMiddleCm: 50, distanceMiddleRightCm: 50, scale: .h0)
+        XCTAssertNil(measurer.occupied(.left, at: 1))
+        XCTAssertNil(measurer.occupied(.middle, at: 1.000001))
+        XCTAssertNil(measurer.occupied(.right, at: 1.000002))
+        // danach ist eine normale Durchfahrt wieder möglich
+        XCTAssertNil(measurer.occupied(.left, at: 5))
+        XCTAssertNil(measurer.occupied(.middle, at: 6))
+        XCTAssertNotNil(measurer.occupied(.right, at: 7))
+    }
+
     func testStaleSequenceTimesOut() {
         let measurer = ContactSpeedMeasurer(distanceLeftMiddleCm: 50, distanceMiddleRightCm: 50, scale: .h0)
         measurer.timeoutSeconds = 5

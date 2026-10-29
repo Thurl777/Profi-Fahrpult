@@ -15,6 +15,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     private let followSwitch = UISwitch()
     private let faderSwitch = UISwitch()
     private let turnoutStepper = UIStepper()
+    private let controlCells = ControlCellCache()
 
     private enum Section: Int, CaseIterable {
         case connection
@@ -97,9 +98,15 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         settings.turnoutSwitchTime = Int(turnoutStepper.value)
         client.turnoutSwitchTime = settings.turnoutSwitchTime
         UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
-        if let row = rowIndex(of: .turnoutTime) {
-            tableView.reloadRows(at: [IndexPath(row: row, section: Section.settings.rawValue)], with: .none)
+        // Nur die Beschriftung ändern, die Zeile nicht neu laden: Der Stepper wird gerade bedient
+        if let row = rowIndex(of: .turnoutTime),
+           let cell = tableView.cellForRow(at: IndexPath(row: row, section: Section.settings.rawValue)) {
+            cell.textLabel?.text = turnoutTimeTitle
         }
+    }
+
+    private var turnoutTimeTitle: String {
+        return "Schaltzeit Weichen: \(settings.turnoutSwitchTime) ms"
     }
 
     private func connectTapped() {
@@ -185,14 +192,17 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     }
 
     private func controlCell(_ title: String, _ control: UIView, width: CGFloat? = nil) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        Theme.styleCell(cell)
-        cell.selectionStyle = .none
-        cell.textLabel?.text = title
-        if let width = width {
-            control.frame = CGRect(x: 0, y: 0, width: width, height: 32)
+        let cell = controlCells.cell(for: control) {
+            let newCell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            Theme.styleCell(newCell)
+            newCell.selectionStyle = .none
+            if let width = width {
+                control.frame = CGRect(x: 0, y: 0, width: width, height: 32)
+            }
+            newCell.accessoryView = control
+            return newCell
         }
-        cell.accessoryView = control
+        cell.textLabel?.text = title
         return cell
     }
 
@@ -260,9 +270,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .showFader: return controlCell("Schieberegler neben Tacho anzeigen", faderSwitch)
         case .keepScreen: return controlCell("Bildschirm nicht sperren", screenSwitch)
         case .autoConnect: return controlCell("Beim Start automatisch verbinden", autoConnectSwitch)
-        case .turnoutTime:
-            let cell = controlCell("Schaltzeit Weichen: \(settings.turnoutSwitchTime) ms", turnoutStepper)
-            return cell
+        case .turnoutTime: return controlCell(turnoutTimeTitle, turnoutStepper)
         case .contactTrack:
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             Theme.styleCell(cell)

@@ -20,6 +20,9 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate, Z
     /// Gemessene Durchfahrten der aktuellen Fahrstufe (Einzeln-Modus)
     private var runs: [ContactRun] = []
     private var lastOccupied: [ContactPosition: Bool] = [.left: false, .middle: false, .right: false]
+    /// Meldergruppen, deren Antwort auf `requestFeedback()` noch aussteht. Diese erste Antwort gibt
+    /// nur den Ausgangszustand wieder und darf keine Durchfahrt auslösen.
+    private var pendingSeedGroups: Set<UInt8> = []
 
     private enum Mode: Int { case manual = 0, automatic = 1 }
     private var mode: Mode = .manual
@@ -212,7 +215,7 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate, Z
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        client.requestFeedback()
+        requestFeedbackSeed()
         measurer.distanceLeftMiddleCm = settings.contactDistanceLeftMiddleCm
         measurer.distanceMiddleRightCm = settings.contactDistanceMiddleRightCm
         measurer.scale = settings.modelScale
@@ -610,6 +613,12 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate, Z
         return client.feedbackOccupied(module: module, input: input)
     }
 
+    private func requestFeedbackSeed() {
+        guard client.connectionState == .connected else { return }
+        pendingSeedGroups = [0, 1]
+        client.requestFeedback()
+    }
+
     private func seedOccupancyState() {
         for position: ContactPosition in [.left, .middle, .right] {
             lastOccupied[position] = currentOccupancy(for: position) ?? false
@@ -651,12 +660,16 @@ final class SpeedMeasureViewController: UIViewController, UITextFieldDelegate, Z
     // MARK: Z21ClientObserver
 
     func z21Client(_ client: Z21Client, feedbackChangedInGroup group: UInt8) {
+        if pendingSeedGroups.remove(group) != nil {
+            seedOccupancyState()
+            return
+        }
         refreshContactStates()
     }
 
     func z21ClientConnectionChanged(_ client: Z21Client) {
         if client.connectionState == .connected {
-            client.requestFeedback()
+            requestFeedbackSeed()
             client.subscribeLoco(loco.address)
         } else if autoState != .idle {
             finishAutomatic(aborted: true)

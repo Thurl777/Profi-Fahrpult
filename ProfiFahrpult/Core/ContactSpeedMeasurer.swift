@@ -31,6 +31,10 @@ public final class ContactSpeedMeasurer {
     /// Eine begonnene Durchfahrt wird verworfen, wenn sie länger als diese Zeit dauert (Lok stehen geblieben o.ä.)
     public var timeoutSeconds: Double = 20
 
+    /// Schnellere Durchfahrten werden verworfen: Sie entstehen, wenn mehrere Melder im selben
+    /// Augenblick gemeldet werden (z.B. erste Rückmeldung der Z21 oder lange Lok über allen Meldern).
+    public var maxPlausibleKmh: Double = SpeedPoint.maxKmh
+
     private var sequence: [ContactPosition] = []
     private var times: [ContactPosition: Double] = [:]
 
@@ -79,7 +83,8 @@ public final class ContactSpeedMeasurer {
         let dt2 = t3 - t2
         guard dt1 > 0, dt2 > 0,
               let v1 = scale.scaleSpeed(distanceCm: d1, seconds: dt1),
-              let v2 = scale.scaleSpeed(distanceCm: d2, seconds: dt2) else { return nil }
+              let v2 = scale.scaleSpeed(distanceCm: d2, seconds: dt2),
+              v1 <= maxPlausibleKmh, v2 <= maxPlausibleKmh else { return nil }
         return ContactRun(kmh: (v1 + v2) / 2, forward: forward)
     }
 }
