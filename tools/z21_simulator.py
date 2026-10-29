@@ -7,8 +7,11 @@ In der App unter System als IP die Adresse des Rechners eintragen
 (beim iPad-Simulator auf demselben Mac: 127.0.0.1).
 
 Unterstützt: Gleisspannung, Nothalt, Lok fahren/Funktionen (Broadcast an alle
-Clients), Weichen, CV lesen/schreiben (Programmiergleis + POM), Systemzustand,
+Clients, mit Flag 0x00010000 auch für nicht abonnierte Loks), Weichen,
+CV lesen/schreiben (Programmiergleis + POM), Systemzustand,
 R-Bus-Rückmelder (Kontakte wechseln zufällig).
+
+Eine Multimaus lässt sich mit tools/multimaus.py nachahmen.
 """
 import argparse
 import random
@@ -79,7 +82,8 @@ class Simulator:
 
     def broadcast(self, data, flag=0x1, loco=None):
         for c, st in list(self.clients.items()):
-            if loco is not None and loco not in st["locos"]:
+            # Lok-Infos gehen an Abonnenten der Lok und an Clients mit Flag 0x00010000 (alle Loks)
+            if loco is not None and loco not in st["locos"] and not st["flags"] & 0x00010000:
                 continue
             if st["flags"] & flag or flag == 0:
                 self.send(c, data)

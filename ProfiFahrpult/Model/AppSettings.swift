@@ -26,6 +26,7 @@ final class AppSettings {
         static let autoConnect = "z21.autoConnect"
         static let modelScale = "measure.scale"
         static let measureDistance = "measure.distanceCm"
+        static let followHandhelds = "ui.followHandhelds"
     }
 
     private init() {
@@ -39,7 +40,8 @@ final class AppSettings {
             Key.accessoryPage: 0,
             Key.autoConnect: true,
             Key.modelScale: ModelScale.h0.rawValue,
-            Key.measureDistance: 100.0
+            Key.measureDistance: 100.0,
+            Key.followHandhelds: true
         ])
     }
 
@@ -103,6 +105,12 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: Key.measureDistance) }
     }
 
+    /// Regler übernehmen eine Lok, sobald sie an einer Multimaus (oder einem anderen Gerät) bedient wird
+    var followHandhelds: Bool {
+        get { return defaults.bool(forKey: Key.followHandhelds) }
+        set { defaults.set(newValue, forKey: Key.followHandhelds) }
+    }
+
     func throttleLocoID(_ throttle: Int) -> String? {
         return defaults.string(forKey: Key.throttlePrefix + "\(throttle)")
     }
@@ -111,5 +119,14 @@ final class AppSettings {
         defaults.set(id, forKey: Key.throttlePrefix + "\(throttle)")
         NotificationCenter.default.post(name: .throttleAssignmentChanged, object: self,
                                         userInfo: ["throttle": throttle])
+    }
+
+    /// Tauscht die Loks der beiden Regler
+    func swapThrottleLocos() {
+        let first = throttleLocoID(0)
+        defaults.set(throttleLocoID(1), forKey: Key.throttlePrefix + "0")
+        defaults.set(first, forKey: Key.throttlePrefix + "1")
+        NotificationCenter.default.post(name: .throttleAssignmentChanged, object: self,
+                                        userInfo: ["swapped": true])
     }
 }

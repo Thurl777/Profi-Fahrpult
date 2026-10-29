@@ -8,6 +8,10 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     /// Wird aufgerufen, wenn der Benutzer eine andere Lok wählen möchte
     var onSelectLoco: ((ThrottleView, UIView) -> Void)?
+    /// Loks der beiden Regler tauschen (falls die Multimaus-Kopplung den falschen Regler erwischt hat)
+    var onSwap: (() -> Void)?
+    /// Der Regler wurde in der App bedient
+    var onUserActivity: ((ThrottleView) -> Void)?
 
     private let client = Z21Client.shared
 
@@ -16,6 +20,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private let infoLabel = UILabel()
     private let busyLabel = UILabel()
     private let selectButton = ECoSButton(title: "Lok wählen", style: .accent)
+    private let swapButton = ECoSButton(title: "⇄", style: .normal)
     private let tacho = TachometerView()
     private let reverseButton = ECoSButton(title: "◀", style: .normal)
     private let forwardButton = ECoSButton(title: "▶", style: .normal)
@@ -31,6 +36,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private var functionPage = 0
     /// Eingehende Fahrstufen werden kurz nach einer Bedienung ignoriert, damit der Zeiger nicht springt
     private var lastUserSpeedChange = Date.distantPast
+    /// So lange nach einer Bedienung am Handregler wird „Handregler aktiv“ angezeigt
+    private static let handheldHintTime: TimeInterval = 5
 
     init(index: Int) {
         self.index = index
@@ -58,17 +65,18 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         infoLabel.textColor = Theme.textDim
         busyLabel.font = Theme.font(12, bold: true)
         busyLabel.textColor = Theme.functionOn
-        busyLabel.text = "Wird von anderem Gerät gesteuert"
         busyLabel.isHidden = true
         separator.backgroundColor = Theme.panelBorder
 
-        ([locoImage, nameLabel, infoLabel, busyLabel, selectButton, tacho,
+        ([locoImage, nameLabel, infoLabel, busyLabel, selectButton, swapButton, tacho,
           reverseButton, minusButton, haltButton, plusButton, forwardButton, separator] as [UIView]).forEach {
             contentView.addSubview($0)
         }
 
         selectButton.titleLabel?.font = Theme.font(14, bold: true)
         selectButton.addTarget(self, action: #selector(selectTapped), for: .touchUpInside)
+        swapButton.titleLabel?.font = Theme.font(22, bold: true)
+        swapButton.addTarget(self, action: #selector(swapTapped), for: .touchUpInside)
         let imageTap = UITapGestureRecognizer(target: self, action: #selector(selectTapped))
         locoImage.addGestureRecognizer(imageTap)
 
@@ -126,8 +134,9 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         locoImage.frame = CGRect(x: pad, y: pad, width: imgW, height: headerH - 6)
         let selW = min(120, w * 0.28)
         selectButton.frame = CGRect(x: w - pad - selW, y: pad + 8, width: selW, height: 42)
+        swapButton.frame = CGRect(x: selectButton.frame.minX - 6 - 44, y: pad + 8, width: 44, height: 42)
         let textX = locoImage.frame.maxX + 10
-        let textW = selectButton.frame.minX - 8 - textX
+        let textW = swapButton.frame.minX - 8 - textX
         nameLabel.frame = CGRect(x: textX, y: pad, width: textW, height: 28)
         infoLabel.frame = CGRect(x: textX, y: pad + 28, width: textW, height: 18)
         busyLabel.frame = CGRect(x: textX, y: pad + 45, width: textW, height: 16)
@@ -227,8 +236,21 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         }
         forwardButton.isOn = loco != nil && isForward
         reverseButton.isOn = loco != nil && !isForward
-        busyLabel.isHidden = !(info?.busy ?? false)
+        updateHint()
         updateFunctionKeys()
+    }
+
+    /// Hinweis unter dem Loknamen: von anderem X-Bus-Gerät belegt oder gerade am Handregler bedient
+    private func updateHint() {
+        if currentInfo?.busy ?? false {
+            busyLabel.text = "Wird von anderem Gerät gesteuert"
+        } else if let loco = loco, let last = client.lastExternalActivity[loco.address],
+                  Date().timeIntervalSince(last) < ThrottleView.handheldHintTime {
+            busyLabel.text = "Handregler aktiv"
+        } else {
+            busyLabel.text = nil
+        }
+        busyLabel.isHidden = busyLabel.text == nil
     }
 
     private func updateFunctionKeys() {
@@ -253,6 +275,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private func drive(step: Int, forward: Bool) {
         guard let loco = loco else { return }
         lastUserSpeedChange = Date()
+        onUserActivity?(self)
         let clamped = max(0, min(step, loco.speedSteps.maxStep))
         client.setLocoDrive(address: loco.address, speedSteps: loco.speedSteps, step: clamped, forward: forward)
         tacho.step = clamped
@@ -264,6 +287,10 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     @objc private func selectTapped() {
         onSelectLoco?(self, selectButton)
+    }
+
+    @objc private func swapTapped() {
+        onSwap?()
     }
 
     @objc private func tachoChanged() {
@@ -304,6 +331,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     @objc private func haltLongPressed(_ gr: UILongPressGestureRecognizer) {
         guard gr.state == .began, let loco = loco else { return }
         lastUserSpeedChange = Date()
+        onUserActivity?(self)
         client.emergencyStopLoco(loco.address)
         tacho.step = 0
         tacho.emergencyStop = true
@@ -320,6 +348,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     @objc private func functionDown(_ key: FunctionKey) {
         guard let loco = loco else { return }
+        onUserActivity?(self)
         let fn = functionIndex(for: key)
         if loco.function(fn).momentary {
             client.setLocoFunction(address: loco.address, function: fn, on: true)
@@ -351,6 +380,14 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     func z21Client(_ client: Z21Client, locoChanged info: LocoInfo) {
         guard let loco = loco, info.address == loco.address else { return }
         updateFromClient()
+    }
+
+    func z21Client(_ client: Z21Client, externalLocoActivity info: LocoInfo) {
+        guard let loco = loco, info.address == loco.address else { return }
+        updateHint()
+        DispatchQueue.main.asyncAfter(deadline: .now() + ThrottleView.handheldHintTime + 0.1) { [weak self] in
+            self?.updateHint()
+        }
     }
 
     func z21Client(_ client: Z21Client, railCom data: RailComData) {

@@ -10,6 +10,8 @@ public protocol Z21ClientObserver: AnyObject {
     func z21Client(_ client: Z21Client, turnoutChanged address: UInt16, position: TurnoutPosition)
     func z21Client(_ client: Z21Client, feedbackChangedInGroup group: UInt8)
     func z21Client(_ client: Z21Client, railCom data: RailComData)
+    /// Eine Lok wurde von außen bedient (z.B. Multimaus, andere App), nicht von diesem Client.
+    func z21Client(_ client: Z21Client, externalLocoActivity info: LocoInfo)
 }
 
 public extension Z21ClientObserver {
@@ -21,6 +23,7 @@ public extension Z21ClientObserver {
     func z21Client(_ client: Z21Client, turnoutChanged address: UInt16, position: TurnoutPosition) {}
     func z21Client(_ client: Z21Client, feedbackChangedInGroup group: UInt8) {}
     func z21Client(_ client: Z21Client, railCom data: RailComData) {}
+    func z21Client(_ client: Z21Client, externalLocoActivity info: LocoInfo) {}
 }
 
 public enum ConnectionState: Equatable {
@@ -71,9 +74,20 @@ public final class Z21Client {
     /// 20 Bytes: R-Bus-Module 1...20, je 8 Eingänge
     public private(set) var feedback: [UInt8] = Array(repeating: 0, count: 20)
     public private(set) var railCom: [UInt16: RailComData] = [:]
+    /// Zeitpunkt der letzten Bedienung einer Lok von außen (Multimaus, andere App)
+    public private(set) var lastExternalActivity: [UInt16: Date] = [:]
 
     /// Dauer, die ein Weichenausgang aktiv bleibt (ms)
     public var turnoutSwitchTime: Int = 150
+
+    /// Lok-Infos aller geänderten Loks empfangen, nicht nur der abonnierten.
+    /// Nötig, um Lokwechsel an einer Multimaus zu erkennen.
+    public var receiveAllLocoInfo = false {
+        didSet {
+            guard receiveAllLocoInfo != oldValue, socket.isOpen else { return }
+            send(Z21Codec.setBroadcastFlags(broadcastFlags))
+        }
+    }
 
     // MARK: Intern
 
@@ -85,10 +99,18 @@ public final class Z21Client {
     private var subscribedLocos: [UInt16] = []
     private var pendingCV: ((CVResult) -> Void)?
     private var pendingCVTimeout: DispatchWorkItem?
+    /// Letzter eigener Befehl bzw. eigene Abfrage je Lok, um Echos von Fremdbedienung zu unterscheiden
+    private var lastLocalCommand: [UInt16: Date] = [:]
+    /// Nach Nothalt, Gleisspannung oder Verbindungsaufbau meldet die Zentrale viele Loks auf einmal
+    private var suppressExternalUntil = Date.distantPast
+    var now: () -> Date = { Date() }
 
     /// Nach dieser Zeit ohne Antwort gilt die Verbindung als verloren
     private let connectionTimeout: TimeInterval = 5
     private let cvTimeout: TimeInterval = 15
+    /// So lange gilt eine Lok-Info nach einem eigenen Befehl als Echo
+    private let localEchoWindow: TimeInterval = 1
+    private let externalSuppressTime: TimeInterval = 2
 
     public init() {
         socket.onReceive = { [weak self] data in
@@ -147,11 +169,12 @@ public final class Z21Client {
     private func setConnectionState(_ state: ConnectionState) {
         guard state != connectionState else { return }
         connectionState = state
+        if state == .connected { suppressExternal() }
         notify { $0.z21ClientConnectionChanged(self) }
     }
 
     private func sendHandshake() {
-        send(Z21Codec.setBroadcastFlags([.drivingAndSwitching, .rmBus, .systemState, .railComSubscribed]))
+        send(Z21Codec.setBroadcastFlags(broadcastFlags))
         send(Z21Codec.getSerialNumber())
         send(Z21Codec.getHardwareInfo())
         send(Z21Codec.getXBusVersion())
@@ -159,8 +182,15 @@ public final class Z21Client {
         send(Z21Codec.getStatus())
         send(Z21Codec.systemStateGetData())
         for address in subscribedLocos {
+            markLocal(address)
             send(Z21Codec.getLocoInfo(address: address))
         }
+    }
+
+    var broadcastFlags: Z21.BroadcastFlags {
+        var flags: Z21.BroadcastFlags = [.drivingAndSwitching, .rmBus, .systemState, .railComSubscribed]
+        if receiveAllLocoInfo { flags.insert(.allLocoInfo) }
+        return flags
     }
 
     private func startTimer() {
@@ -221,10 +251,12 @@ public final class Z21Client {
         subscribedLocos.removeAll { $0 == address }
         subscribedLocos.append(address)
         if subscribedLocos.count > 16 { subscribedLocos.removeFirst() }
+        markLocal(address)
         send(Z21Codec.getLocoInfo(address: address))
     }
 
     public func requestLocoInfo(_ address: UInt16) {
+        markLocal(address)
         send(Z21Codec.getLocoInfo(address: address))
     }
 
@@ -234,6 +266,7 @@ public final class Z21Client {
 
     public func setLocoDrive(address: UInt16, speedSteps: SpeedSteps, step: Int, forward: Bool) {
         guard address > 0 else { return }
+        markLocal(address)
         send(Z21Codec.setLocoDrive(address: address, speedSteps: speedSteps, step: step, forward: forward))
         var info = locos[address] ?? LocoInfo(address: address, speedSteps: speedSteps)
         info.speedSteps = speedSteps
@@ -245,6 +278,7 @@ public final class Z21Client {
 
     public func emergencyStopLoco(_ address: UInt16) {
         guard address > 0 else { return }
+        markLocal(address)
         send(Z21Codec.setLocoEmergencyStop(address: address))
         if var info = locos[address] {
             info.step = 0
@@ -255,6 +289,7 @@ public final class Z21Client {
 
     public func setLocoFunction(address: UInt16, function: Int, on: Bool) {
         guard address > 0 else { return }
+        markLocal(address)
         send(Z21Codec.setLocoFunction(address: address, function: function, action: on ? .on : .off))
         var info = locos[address] ?? LocoInfo(address: address)
         info.setFunction(function, on: on)
@@ -264,6 +299,26 @@ public final class Z21Client {
     private func updateLoco(_ info: LocoInfo) {
         locos[info.address] = info
         notify { $0.z21Client(self, locoChanged: info) }
+    }
+
+    private func markLocal(_ address: UInt16) {
+        lastLocalCommand[address] = now()
+    }
+
+    private func suppressExternal() {
+        suppressExternalUntil = now().addingTimeInterval(externalSuppressTime)
+    }
+
+    /// Stammt die Lok-Info von einer Bedienung außerhalb dieses Clients?
+    func isExternalChange(_ info: LocoInfo, previous: LocoInfo?) -> Bool {
+        let t = now()
+        if t < suppressExternalUntil { return false }
+        if let last = lastLocalCommand[info.address], t.timeIntervalSince(last) < localEchoWindow { return false }
+        guard let previous = previous else {
+            // Unbekannte Lok: nur zählen, wenn sie fährt oder eine Funktion an ist
+            return info.step > 0 || info.functions != 0
+        }
+        return info.step != previous.step || info.forward != previous.forward || info.functions != previous.functions
     }
 
     // MARK: - Weichen / Zubehör
@@ -388,14 +443,18 @@ public final class Z21Client {
             xbusVersion = String(format: "%d.%d", version >> 4, version & 0x0F)
             notify { $0.z21ClientInfoChanged(self) }
         case .trackPowerOn:
+            suppressExternal()
             setTrackStatus(.on)
         case .trackPowerOff:
+            suppressExternal()
             setTrackStatus(.off)
         case .programmingMode:
             setTrackStatus(.programming)
         case .trackShortCircuit:
+            suppressExternal()
             setTrackStatus(.shortCircuit)
         case .emergencyStopped:
+            suppressExternal()
             setTrackStatus(.emergencyStop)
             for (address, var info) in locos where info.step != 0 {
                 info.step = 0
@@ -409,8 +468,13 @@ public final class Z21Client {
             setTrackStatus(Z21Client.trackStatus(from: state.centralState))
             notify { $0.z21ClientSystemStateChanged(self) }
         case .locoInfo(let info):
+            let previous = locos[info.address]
             locos[info.address] = info
             notify { $0.z21Client(self, locoChanged: info) }
+            if isExternalChange(info, previous: previous) {
+                lastExternalActivity[info.address] = now()
+                notify { $0.z21Client(self, externalLocoActivity: info) }
+            }
         case .turnoutInfo(let address, let position):
             turnouts[address] = position
             notify { $0.z21Client(self, turnoutChanged: address, position: position) }

@@ -13,6 +13,7 @@
 		36B7FBE07CBB2E1E0D85D9A2 /* AccessoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E654CDBB359AF53913894B /* AccessoryStore.swift */; };
 		3A359F4AA2F5F00C87A78B54 /* LocoEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C89F6B46FC862EA8E5F1550 /* LocoEditViewController.swift */; };
 		5CF69948966A122ADD8AF115 /* DriveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9242ADF1E5D488C9971495 /* DriveViewController.swift */; };
+		18FE0458A3F3C49620F4AD08 /* HandheldFollower.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74E5D2FBC7C83FBE857B7F48 /* HandheldFollower.swift */; };
 		6C6C4018A31DAF7CEABBC321 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2450CBF337416F082E4A9700 /* AppSettings.swift */; };
 		787A178F43F161563DF620A8 /* FunctionKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A79080E6CE482438353FEA76 /* FunctionKey.swift */; };
 		7AF6837F1F397F77C56CEF7E /* SwitchboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AC2206729E8883B98B13B0 /* SwitchboardViewController.swift */; };
@@ -33,6 +34,7 @@
 		DA1027285BB45223CE64DD4B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE34930D227E482E93E67557 /* AppDelegate.swift */; };
 		E88804BA5F236B5D28BC205C /* Z21Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831E83C149110CAA76CC7F0E /* Z21Protocol.swift */; };
 		F493280AB5638DC51BCEF09E /* SpeedCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */; };
+		E29E927D021172E76A73CDED /* HandheldFollow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EEC13729D977BB09AA90A9 /* HandheldFollow.swift */; };
 		F5AAB596A107677D1A3170B0 /* SpeedCurveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A71E85E5F9DFA0A8D7A08CD /* SpeedCurveViewController.swift */; };
 /* End PBXBuildFile section */
 
@@ -49,11 +51,13 @@
 		3E8E9BD8D26DBE236FCC8170 /* Locomotive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locomotive.swift; sourceTree = "<group>"; };
 		41E654CDBB359AF53913894B /* AccessoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryStore.swift; sourceTree = "<group>"; };
 		450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedCurve.swift; sourceTree = "<group>"; };
+		14EEC13729D977BB09AA90A9 /* HandheldFollow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldFollow.swift; sourceTree = "<group>"; };
 		49EC60C2DB1B0E6B268FFDFB /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5C9E1FC48CF5723117EF967A /* Z21Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Z21Client.swift; sourceTree = "<group>"; };
 		60772290B5ABBCDB450DE1F0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		831E83C149110CAA76CC7F0E /* Z21Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Z21Protocol.swift; sourceTree = "<group>"; };
 		8A9242ADF1E5D488C9971495 /* DriveViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveViewController.swift; sourceTree = "<group>"; };
+		74E5D2FBC7C83FBE857B7F48 /* HandheldFollower.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandheldFollower.swift; sourceTree = "<group>"; };
 		8CCBA9FE2B933D268CCAA2F2 /* UDPSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPSocket.swift; sourceTree = "<group>"; };
 		92AC2206729E8883B98B13B0 /* SwitchboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwitchboardViewController.swift; sourceTree = "<group>"; };
 		996AD237BC284D463E664FFE /* ProfiFahrpult.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProfiFahrpult.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -106,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */,
+				14EEC13729D977BB09AA90A9 /* HandheldFollow.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -151,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				8A9242ADF1E5D488C9971495 /* DriveViewController.swift */,
+				74E5D2FBC7C83FBE857B7F48 /* HandheldFollower.swift */,
 				A79080E6CE482438353FEA76 /* FunctionKey.swift */,
 				112BAB6350D8E37DD8ECDA86 /* ThrottleView.swift */,
 			);
@@ -298,6 +304,7 @@
 			files = (
 				DA1027285BB45223CE64DD4B /* AppDelegate.swift in Sources */,
 				F493280AB5638DC51BCEF09E /* SpeedCurve.swift in Sources */,
+				E29E927D021172E76A73CDED /* HandheldFollow.swift in Sources */,
 				36B7FBE07CBB2E1E0D85D9A2 /* AccessoryStore.swift in Sources */,
 				6C6C4018A31DAF7CEABBC321 /* AppSettings.swift in Sources */,
 				B5598F0C3B101C879FBF7689 /* LocoStore.swift in Sources */,
@@ -306,6 +313,7 @@
 				B223B3A98D8ED1F8E3783714 /* LocoImageView.swift in Sources */,
 				D2EF3A871E00821896E10D49 /* TachometerView.swift in Sources */,
 				5CF69948966A122ADD8AF115 /* DriveViewController.swift in Sources */,
+				18FE0458A3F3C49620F4AD08 /* HandheldFollower.swift in Sources */,
 				787A178F43F161563DF620A8 /* FunctionKey.swift in Sources */,
 				838D96F5B9D573A63926E19F /* ThrottleView.swift in Sources */,
 				B3A0832BEAF56274E056EF13 /* FeedbackViewController.swift in Sources */,

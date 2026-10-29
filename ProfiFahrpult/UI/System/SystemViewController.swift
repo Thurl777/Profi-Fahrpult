@@ -12,6 +12,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     private let directionSwitch = UISwitch()
     private let screenSwitch = UISwitch()
     private let autoConnectSwitch = UISwitch()
+    private let followSwitch = UISwitch()
     private let turnoutStepper = UIStepper()
 
     private enum Section: Int, CaseIterable {
@@ -52,7 +53,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         directionSwitch.isOn = settings.directionChangeStops
         screenSwitch.isOn = settings.keepScreenOn
         autoConnectSwitch.isOn = settings.autoConnect
-        for s in [directionSwitch, screenSwitch, autoConnectSwitch] {
+        followSwitch.isOn = settings.followHandhelds
+        for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch] {
             s.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
         }
         turnoutStepper.minimumValue = 50
@@ -87,6 +89,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         settings.directionChangeStops = directionSwitch.isOn
         settings.keepScreenOn = screenSwitch.isOn
         settings.autoConnect = autoConnectSwitch.isOn
+        settings.followHandhelds = followSwitch.isOn
+        client.receiveAllLocoInfo = settings.followHandhelds
         settings.turnoutSwitchTime = Int(turnoutStepper.value)
         client.turnoutSwitchTime = settings.turnoutSwitchTime
         UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
@@ -120,7 +124,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case host, port, connect, status
         case hardware, firmware, serial, xbus
         case mainCurrent, progCurrent, filteredCurrent, temperature, supply, track, flags
-        case stopMode, directionStops, keepScreen, autoConnect, turnoutTime, simulatorHint
+        case stopMode, directionStops, followHandhelds, keepScreen, autoConnect, turnoutTime, simulatorHint
     }
 
     private func rows(_ section: Section) -> [Row] {
@@ -128,7 +132,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .connection: return [.host, .port, .connect, .status]
         case .station: return [.hardware, .firmware, .serial, .xbus]
         case .state: return [.mainCurrent, .progCurrent, .filteredCurrent, .temperature, .supply, .track, .flags]
-        case .settings: return [.stopMode, .directionStops, .keepScreen, .autoConnect, .turnoutTime, .simulatorHint]
+        case .settings: return [.stopMode, .directionStops, .followHandhelds, .keepScreen, .autoConnect, .turnoutTime,
+                                .simulatorHint]
         }
     }
 
@@ -156,6 +161,11 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if Section(rawValue: section) == .connection {
             return "Werkseinstellung der Z21: 192.168.0.111, Port 21105. Das iPad muss im WLAN des Z21-Routers sein."
+        }
+        if Section(rawValue: section) == .settings {
+            return "Lokwechsel an Multimaus folgen: Wird an einer Multimaus eine andere Lok gefahren oder eine "
+                + "Funktion geschaltet, übernimmt der Regler sie, der am längsten nicht benutzt wurde. "
+                + "Mit ⇄ lassen sich die beiden Regler tauschen."
         }
         return nil
     }
@@ -242,6 +252,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
             return valueCell("Meldungen", state == nil ? nil : (flags.isEmpty ? "keine" : flags.joined(separator: ", ")))
         case .stopMode: return controlCell("STOP-Taste", stopModeControl, width: 330)
         case .directionStops: return controlCell("Richtungswechsel hält Lok an", directionSwitch)
+        case .followHandhelds: return controlCell("Lokwechsel an Multimaus folgen", followSwitch)
         case .keepScreen: return controlCell("Bildschirm nicht sperren", screenSwitch)
         case .autoConnect: return controlCell("Beim Start automatisch verbinden", autoConnectSwitch)
         case .turnoutTime:
