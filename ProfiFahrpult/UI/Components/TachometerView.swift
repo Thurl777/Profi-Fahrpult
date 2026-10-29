@@ -168,10 +168,7 @@ final class TachometerView: UIControl {
         // Teilstriche: alle auf einer Mittellinie, drei Längen
         let layout = TachometerView.scaleLayout(scaleKmh)
         let tickMid = r * 0.794
-        let labelFont = Theme.font(r * 0.148, bold: true)
-        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: white]
-        // Bis hierhin dürfen die Zahlen reichen, damit sie nicht an die langen Striche stoßen
-        let labelLimit = tickMid - r * 0.115 / 2 - r * 0.03
+        var ticks: [(angle: CGFloat, inner: CGFloat, outer: CGFloat, width: CGFloat)] = []
         for i in 0...layout.ticks {
             let a = startAngle + sweep * CGFloat(i) / CGFloat(layout.ticks)
             let isEnd = i == 0 || i == layout.ticks
@@ -191,39 +188,57 @@ final class TachometerView: UIControl {
             tick.lineCapStyle = .butt
             white.setStroke()
             tick.stroke()
+            ticks.append((a, tickMid - length / 2, tickMid + length / 2, max(1.5, width)))
+        }
 
-            if i % layout.labelEvery == 0 || isEnd {
-                let value = scaleKmh * Double(i) / Double(layout.ticks)
-                let text = "\(Int(value.rounded()))" as NSString
-                let size = text.size(withAttributes: labelAttrs)
-                var tp = point(at: a, radius: r * 0.6)
-                // 0 und Endwert stehen unten in einer Zeile mit der Geschwindigkeit,
-                // schräg oben stehende Zahlen sitzen an der ECoS etwas höher
-                if isEnd {
-                    tp.y = c.y + r * 0.5
-                } else if tp.y < c.y {
-                    tp.y -= r * 0.065 * abs(cos(a))
+        // Kleinster Abstand zwischen einer Zahl (Ziffernhöhe, ohne Ober-/Unterlänge) und den Strichen
+        func clearance(_ center: CGPoint, halfWidth hw: CGFloat, halfHeight hh: CGFloat) -> CGFloat {
+            var best = CGFloat.greatestFiniteMagnitude
+            for t in ticks {
+                for k in 0...8 {
+                    let p = point(at: t.angle, radius: t.inner + (t.outer - t.inner) * CGFloat(k) / 8)
+                    let dx = max(abs(p.x - center.x) - hw, 0)
+                    let dy = max(abs(p.y - center.y) - hh, 0)
+                    best = min(best, hypot(dx, dy) - t.width / 2)
                 }
-                // Lange Zahlen (100, 120 …) so weit zur Mitte rücken, dass die äußerste Ecke frei bleibt
-                let hw = size.width / 2
-                let hh = labelFont.capHeight / 2
-                let dx = abs(tp.x - c.x)
-                let dy = abs(tp.y - c.y)
-                if hypot(dx + hw, dy + hh) > labelLimit {
-                    if isEnd {
-                        // in der Zeile der Geschwindigkeit bleiben, nur waagrecht einrücken
-                        let x = sqrt(max(0, labelLimit * labelLimit - (dy + hh) * (dy + hh))) - hw
-                        tp.x = c.x + (tp.x < c.x ? -x : x)
-                    } else {
-                        let qa = dx * dx + dy * dy
-                        let qb = dx * hw + dy * hh
-                        let qc = hw * hw + hh * hh - labelLimit * labelLimit
-                        let k = max(0, (-qb + sqrt(max(0, qb * qb - qa * qc))) / qa)
-                        tp = CGPoint(x: c.x + (tp.x - c.x) * k, y: c.y + (tp.y - c.y) * k)
-                    }
-                }
-                text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
             }
+            return best
+        }
+
+        let labelFont = Theme.font(r * 0.148, bold: true)
+        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: white]
+        let minGap = r * 0.012
+        for i in 0...layout.ticks where i % layout.labelEvery == 0 || i == layout.ticks {
+            let a = ticks[i].angle
+            let isEnd = i == 0 || i == layout.ticks
+            let value = scaleKmh * Double(i) / Double(layout.ticks)
+            let text = "\(Int(value.rounded()))" as NSString
+            let size = text.size(withAttributes: labelAttrs)
+            var tp = point(at: a, radius: r * 0.6)
+            // 0 und Endwert stehen unten in einer Zeile mit der Geschwindigkeit,
+            // schräg oben stehende Zahlen sitzen an der ECoS etwas höher
+            if isEnd {
+                tp.y = c.y + r * 0.5
+            } else if tp.y < c.y {
+                tp.y -= r * 0.065 * abs(cos(a))
+            }
+            // Stößt eine Zahl (z.B. dreistellig) an einen Strich, rückt sie nur so weit zur Mitte wie nötig;
+            // die Endwerte bleiben dabei in ihrer Zeile
+            let hw = size.width / 2
+            let hh = labelFont.capHeight / 2
+            let stepLen = max(0.5, r * 0.002)
+            var tries = 0
+            while clearance(tp, halfWidth: hw, halfHeight: hh) < minGap && tries < 100 {
+                if isEnd {
+                    tp.x += tp.x > c.x ? -stepLen : stepLen
+                } else {
+                    let d = max(1, hypot(tp.x - c.x, tp.y - c.y))
+                    tp.x -= (tp.x - c.x) / d * stepLen
+                    tp.y -= (tp.y - c.y) / d * stepLen
+                }
+                tries += 1
+            }
+            text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
         }
 
         // Geschwindigkeit rechtsbündig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
