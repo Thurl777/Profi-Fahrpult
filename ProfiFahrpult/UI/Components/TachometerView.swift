@@ -1,6 +1,6 @@
 import UIKit
 
-/// Rundinstrument wie der Tacho der ECoS: schwarzes Zifferblatt mit dunkelblauem Ring,
+/// Rundinstrument wie der Tacho der ECoS: schwarzes Zifferblatt mit grauem Ring,
 /// weißen Teilstrichen und gelbem Zeiger. Wird wie ein Drehknopf bedient:
 /// eine kreisende Bewegung auf dem Instrument ändert die Fahrstufe relativ.
 final class TachometerView: UIControl {
@@ -27,8 +27,6 @@ final class TachometerView: UIControl {
     var speedCurve: SpeedCurve? { didSet { setNeedsDisplay() } }
     var forward: Bool = true { didSet { setNeedsDisplay() } }
     var emergencyStop: Bool = false { didSet { setNeedsDisplay() } }
-    /// Lokadresse neben der Nabe, z.B. "[0218]"
-    var addressText: String? { didSet { setNeedsDisplay() } }
     /// Schaltet das Instrument bei fehlender Lok/Verbindung grau
     var isActive: Bool = true { didSet { setNeedsDisplay() } }
 
@@ -49,7 +47,7 @@ final class TachometerView: UIControl {
     }
 
     private var dialCenter: CGPoint { return CGPoint(x: bounds.midX, y: bounds.midY) }
-    private var radius: CGFloat { return min(bounds.width, bounds.height) / 2 - 2 }
+    private var radius: CGFloat { return min(bounds.width, bounds.height) / 2 - 1 }
 
     // MARK: Bedienung
 
@@ -105,11 +103,27 @@ final class TachometerView: UIControl {
 
     // MARK: Zeichnen
 
-    private func scaleInterval(_ scaleKmh: Double) -> Int {
-        if scaleKmh <= 60 { return 10 }
-        if scaleKmh <= 160 { return 20 }
-        if scaleKmh <= 400 { return 50 }
-        return 100
+    /// Einteilung der Skala wie an der ECoS: ein Strich je Teilung, jeder zweite länger,
+    /// jeder vierte am längsten. Beschriftet werden 0, der Endwert und – wenn es aufgeht –
+    /// die Drittel (0 40 80 120 bei 24 Strichen) oder die Hälfte (0 14 28 bei 28 Strichen).
+    static func scaleLayout(_ scale: Double) -> (ticks: Int, labelEvery: Int) {
+        let niceUnits: [Double] = [0.5, 1, 2, 2.5, 5, 10, 12.5, 20, 25, 50, 100]
+        let preferred = [24, 28, 20, 32, 30, 36, 16, 40]
+        let candidates = preferred + stride(from: 16, through: 48, by: 2).filter { !preferred.contains($0) }
+        func labelEvery(_ n: Int) -> Int {
+            if n % 3 == 0 && (n / 3) % 2 == 0 { return n / 3 }
+            if n % 4 == 0 && (n / 4) % 4 == 0 { return n / 4 }
+            return n / 2
+        }
+        for n in candidates {
+            let unit = scale / Double(n)
+            guard niceUnits.contains(where: { abs($0 - unit) < 0.0001 }) else { continue }
+            let label = scale * Double(labelEvery(n)) / Double(n)
+            if abs(label - label.rounded()) < 0.0001 {
+                return (n, labelEvery(n))
+            }
+        }
+        return (24, 8)
     }
 
     /// Endwert der Skala und aktuelle Geschwindigkeit in km/h
@@ -126,30 +140,24 @@ final class TachometerView: UIControl {
         return CGPoint(x: dialCenter.x + cos(angle) * r, y: dialCenter.y + sin(angle) * r)
     }
 
+    private func fillCircle(radius: CGFloat, color: UIColor) {
+        let c = dialCenter
+        color.setFill()
+        UIBezierPath(ovalIn: CGRect(x: c.x - radius, y: c.y - radius, width: 2 * radius, height: 2 * radius)).fill()
+    }
+
+    // Alle Maße sind vom Display der ECoS abgenommen (Tacho mit 254 px Durchmesser) und
+    // als Anteil des Außenradius angegeben.
     override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext(), radius > 20 else { return }
+        guard UIGraphicsGetCurrentContext() != nil, radius > 20 else { return }
         let c = dialCenter
         let r = radius
-        let space = CGColorSpaceCreateDeviceRGB()
+        let ringGray = Theme.rgb(0x494949)
 
-        // Matter, dunkelgrauer Gehäusering wie an der ECoS, oben leicht aufgehellt
-        ctx.saveGState()
-        ctx.addEllipse(in: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
-        ctx.clip()
-        let ring = [Theme.rgb(0x6B6E74).cgColor, Theme.rgb(0x3A3C41).cgColor, Theme.rgb(0x26282C).cgColor] as CFArray
-        if let g = CGGradient(colorsSpace: space, colors: ring, locations: [0, 0.5, 1]) {
-            ctx.drawLinearGradient(g, start: CGPoint(x: c.x, y: c.y - r), end: CGPoint(x: c.x, y: c.y + r), options: [])
-        }
-        ctx.restoreGState()
-
-        // Schwarzes Zifferblatt mit feiner Innenkante
-        let faceR = r * 0.88
-        let face = UIBezierPath(ovalIn: CGRect(x: c.x - faceR, y: c.y - faceR, width: 2 * faceR, height: 2 * faceR))
-        UIColor(white: 0.03, alpha: 1).setFill()
-        face.fill()
-        face.lineWidth = max(1, r * 0.012)
-        UIColor(white: 0.0, alpha: 1).setStroke()
-        face.stroke()
+        // Schwarze Außenkante, flacher grauer Ring, schwarzes Zifferblatt
+        fillCircle(radius: r, color: .black)
+        fillCircle(radius: r * 0.988, color: ringGray)
+        fillCircle(radius: r * 0.886, color: .black)
 
         let speeds = speedValues()
         let scaleKmh = speeds.scale
@@ -157,110 +165,88 @@ final class TachometerView: UIControl {
         let valueAngle = startAngle + sweep * fraction
         let white = isActive ? UIColor.white : Theme.textDark
 
-        // Teilstriche: kräftige weiße Balken mit runden Enden
-        let interval = scaleInterval(scaleKmh)
-        let fontSize = max(10, r * 0.12)
-        let numberAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(fontSize, bold: true),
-                                                          .foregroundColor: white]
-        var values: [Double] = []
-        var v = 0.0
-        while v <= scaleKmh + 0.001 {
-            values.append(v)
-            v += Double(interval) / 2
-        }
-        if let last = values.last, last < scaleKmh - 0.001 {
-            values.append(scaleKmh)
-        }
-        // Wie an der ECoS trägt nur jeder zweite Hauptstrich eine Zahl (0, 40, 80, 120 …);
-        // der Endwert wird immer beschriftet, liegt er dicht an einer Zahl, entfällt diese
-        let labeled = values.filter { Int($0.rounded()) % (interval * 2) == 0 && $0 < scaleKmh - 0.001 }
-        let lastLabeled = labeled.last ?? 0
-        let skipLabel = scaleKmh - lastLabeled < Double(interval) * 0.9 ? lastLabeled : -1
-        let outer = faceR * 0.92
-        for mark in values {
-            let a = startAngle + sweep * CGFloat(mark / scaleKmh)
-            let isEnd = abs(mark - scaleKmh) < 0.001
-            let isMajor = Int(mark.rounded()) % interval == 0 || isEnd
-            let isLabeled = isEnd || (Int(mark.rounded()) % (interval * 2) == 0 && mark != skipLabel)
-            let inner = outer - (isMajor ? r * 0.13 : r * 0.07)
+        // Teilstriche: alle auf einer Mittellinie, drei Längen
+        let layout = TachometerView.scaleLayout(scaleKmh)
+        let tickMid = r * 0.794
+        let labelFont = Theme.font(r * 0.148, bold: true)
+        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: white]
+        for i in 0...layout.ticks {
+            let a = startAngle + sweep * CGFloat(i) / CGFloat(layout.ticks)
+            let isEnd = i == 0 || i == layout.ticks
+            let length: CGFloat
+            let width: CGFloat
+            if i % 4 == 0 || isEnd {
+                length = r * 0.115; width = r * 0.031
+            } else if i % 2 == 0 {
+                length = r * 0.085; width = r * 0.024
+            } else {
+                length = r * 0.055; width = r * 0.024
+            }
             let tick = UIBezierPath()
-            tick.move(to: point(at: a, radius: inner))
-            tick.addLine(to: point(at: a, radius: outer))
-            tick.lineWidth = max(2.5, r * (isMajor ? 0.045 : 0.03))
+            tick.move(to: point(at: a, radius: tickMid - length / 2))
+            tick.addLine(to: point(at: a, radius: tickMid + length / 2))
+            tick.lineWidth = max(1.5, width)
             tick.lineCapStyle = .butt
             white.setStroke()
             tick.stroke()
-            if isLabeled {
-                let text = "\(Int(mark.rounded()))" as NSString
-                let size = text.size(withAttributes: numberAttrs)
-                let tp = point(at: a, radius: inner - fontSize * 1.15)
-                text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: numberAttrs)
+
+            if i % layout.labelEvery == 0 || isEnd {
+                let value = scaleKmh * Double(i) / Double(layout.ticks)
+                let text = "\(Int(value.rounded()))" as NSString
+                let size = text.size(withAttributes: labelAttrs)
+                var tp = point(at: a, radius: r * 0.6)
+                // 0 und Endwert stehen unten in einer Zeile mit der Geschwindigkeit,
+                // schräg oben stehende Zahlen sitzen an der ECoS etwas höher
+                if isEnd {
+                    tp.y = c.y + r * 0.5
+                } else if tp.y < c.y {
+                    tp.y -= r * 0.065 * abs(cos(a))
+                }
+                text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
             }
         }
 
-        // Unten im freien Bereich, den der Zeiger nie überstreicht: Geschwindigkeit, km/h,
-        // darunter Fahrstufe und Adresse (wie "FS 28 [0243]" an der ECoS)
-        let kmhAttrs: [NSAttributedString.Key: Any] = [.font: Theme.monoFont(r * 0.2, bold: true),
-                                                       .foregroundColor: white]
-        let kmh = "\(Int(speeds.current.rounded()))" as NSString
-        let kmhSize = kmh.size(withAttributes: kmhAttrs)
-        let kmhY = c.y + r * 0.34
-        kmh.draw(at: CGPoint(x: c.x - kmhSize.width / 2, y: kmhY), withAttributes: kmhAttrs)
-        let unitAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(max(8, r * 0.075), bold: true),
-                                                        .foregroundColor: white]
-        let unit = "km/h" as NSString
+        // Geschwindigkeit rechtsbündig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
+        let speedFont = Theme.font(r * 0.18, bold: true)
+        let speedAttrs: [NSAttributedString.Key: Any] = [.font: speedFont, .foregroundColor: white]
+        let speedText = "\(Int(speeds.current.rounded()))" as NSString
+        let speedSize = speedText.size(withAttributes: speedAttrs)
+        speedText.draw(at: CGPoint(x: c.x + r * 0.143 - speedSize.width, y: c.y + r * 0.5 - speedSize.height / 2),
+                       withAttributes: speedAttrs)
+        let unitAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(r * 0.13, bold: true),
+                                                        .foregroundColor: emergencyStop ? Theme.red : white]
+        let unit = (emergencyStop ? "NOTHALT" : "km/h") as NSString
         let unitSize = unit.size(withAttributes: unitAttrs)
-        let unitY = kmhY + kmhSize.height - r * 0.03
-        unit.draw(at: CGPoint(x: c.x - unitSize.width / 2, y: unitY), withAttributes: unitAttrs)
+        unit.draw(at: CGPoint(x: c.x + r * 0.045 - unitSize.width / 2, y: c.y + r * 0.7 - unitSize.height / 2),
+                  withAttributes: unitAttrs)
 
-        let infoAttrs: [NSAttributedString.Key: Any] = [.font: Theme.monoFont(max(8, r * 0.065), bold: true),
-                                                        .foregroundColor: emergencyStop ? Theme.red : Theme.rgb(0xA8ABB2)]
-        var info = emergencyStop ? "NOTHALT" : "FS \(step)"
-        if let address = addressText {
-            info += " " + address
+        // Gelber Zeiger: gerader Schaft mit dunkler Mittellinie, spitz auslaufend
+        let halfW = r * 0.047
+        let shoulder = r * 0.49
+        let tipR = r * 0.68
+        // Punkt auf dem Zeiger: `along` vom Mittelpunkt aus, `side` quer dazu
+        func needlePoint(_ along: CGFloat, _ side: CGFloat) -> CGPoint {
+            return CGPoint(x: c.x + cos(valueAngle) * along - sin(valueAngle) * side,
+                           y: c.y + sin(valueAngle) * along + cos(valueAngle) * side)
         }
-        let infoText = info as NSString
-        let infoSize = infoText.size(withAttributes: infoAttrs)
-        infoText.draw(at: CGPoint(x: c.x - infoSize.width / 2, y: unitY + unitSize.height + r * 0.01), withAttributes: infoAttrs)
-
-        // Gelber Zeiger wie an der ECoS: breiter Fuß an der Nabe, spitz auslaufend, dunkle Kante
-        let needleLen = outer - r * 0.16
-        let baseW = r * 0.075
-        let tip = point(at: valueAngle, radius: needleLen)
-        let left = point(at: valueAngle + .pi / 2, radius: baseW)
-        let right = point(at: valueAngle - .pi / 2, radius: baseW)
-        let tailL = point(at: valueAngle + .pi * 0.82, radius: baseW * 1.1)
-        let tailR = point(at: valueAngle - .pi * 0.82, radius: baseW * 1.1)
         let needle = UIBezierPath()
-        needle.move(to: tip)
-        needle.addLine(to: left)
-        needle.addLine(to: tailL)
-        needle.addLine(to: tailR)
-        needle.addLine(to: right)
+        needle.move(to: needlePoint(0, halfW))
+        needle.addLine(to: needlePoint(shoulder, halfW))
+        needle.addLine(to: needlePoint(tipR, 0))
+        needle.addLine(to: needlePoint(shoulder, -halfW))
+        needle.addLine(to: needlePoint(0, -halfW))
         needle.close()
-        needle.lineJoinStyle = .round
-        let needleColor = isActive ? (emergencyStop ? Theme.red : Theme.functionOn) : Theme.textDark
-        ctx.saveGState()
-        ctx.setShadow(offset: CGSize(width: 0, height: 2), blur: 3, color: UIColor.black.cgColor)
+        let needleColor = isActive ? (emergencyStop ? Theme.red : Theme.rgb(0xFFDC00)) : Theme.textDark
         needleColor.setFill()
         needle.fill()
-        ctx.restoreGState()
-        needle.lineWidth = max(1, r * 0.012)
-        needleColor.withBrightnessFactor(0.55).setStroke()
-        needle.stroke()
+        let midLine = UIBezierPath()
+        midLine.move(to: point(at: valueAngle, radius: r * 0.12))
+        midLine.addLine(to: point(at: valueAngle, radius: shoulder * 0.97))
+        midLine.lineWidth = max(1, r * 0.016)
+        Theme.rgb(0x504A10).setStroke()
+        midLine.stroke()
 
-        // Graue Nabe mit dunklem Rand
-        let hubR = r * 0.11
-        let hub = UIBezierPath(ovalIn: CGRect(x: c.x - hubR, y: c.y - hubR, width: hubR * 2, height: hubR * 2))
-        ctx.saveGState()
-        hub.addClip()
-        let hubColors = [Theme.rgb(0x6E7177).cgColor, Theme.rgb(0x35373C).cgColor] as CFArray
-        if let g = CGGradient(colorsSpace: space, colors: hubColors, locations: [0, 1]) {
-            ctx.drawLinearGradient(g, start: CGPoint(x: c.x, y: c.y - hubR), end: CGPoint(x: c.x, y: c.y + hubR), options: [])
-        }
-        ctx.restoreGState()
-        hub.lineWidth = max(1, r * 0.015)
-        Theme.rgb(0x1A1B1E).setStroke()
-        hub.stroke()
+        // Flache graue Nabe
+        fillCircle(radius: r * 0.138, color: ringGray)
     }
 }

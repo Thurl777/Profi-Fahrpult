@@ -180,7 +180,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         let faderW: CGFloat = fader.isHidden ? 0 : 64
         let areaX = faderOnLeft ? pad + faderW : pad
         let areaW = w - 2 * pad - faderW
-        let size = min(areaW, avail)
+        // Etwas kleiner als der verfügbare Platz, damit rundherum Luft bleibt
+        let size = floor(min(areaW, avail) * 0.94)
         tacho.frame = CGRect(x: areaX + (areaW - size) / 2, y: tachoTop + (avail - size) / 2, width: size, height: size)
         if !fader.isHidden {
             let fx = faderOnLeft ? pad : w - pad - faderW
@@ -204,7 +205,6 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         let maxStep = (loco?.speedSteps ?? .steps128).maxStep
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120
         tacho.maxStep = maxStep
-        tacho.addressText = loco.map { String(format: "[%04d]", Int($0.address)) }
         tacho.speedCurve = loco?.speedCurve
         tacho.isActive = active
         tacho.isEnabled = active

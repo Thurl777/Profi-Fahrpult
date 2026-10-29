@@ -22,7 +22,7 @@ final class FunctionKey: ECoSButton {
         addSubview(numberLabel)
         addSubview(nameLabel)
         style = .light
-        onColor = Theme.functionOn
+        onColor = Theme.functionKeyOn
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -44,7 +44,7 @@ final class FunctionKey: ECoSButton {
     }
 
     private func updateContent() {
-        let color: UIColor = isEnabled ? Theme.text : Theme.textDark
+        let color: UIColor = isEnabled ? Theme.functionSymbol : Theme.functionDisabled
         let iconSize = floor(min(bounds.width, bounds.height) * 0.55)
         let img = iconSize > 8 ? FunctionIconRenderer.image(function.icon, size: iconSize, color: color) : nil
         iconView.image = img
@@ -53,7 +53,7 @@ final class FunctionKey: ECoSButton {
         nameLabel.text = "F\(function.index)"
         nameLabel.textColor = color
         numberLabel.text = img != nil ? "F\(function.index)" : (function.momentary ? "M" : "")
-        numberLabel.textColor = Theme.textDim
+        numberLabel.textColor = Theme.functionNumber
         accessibilityLabel = "F\(function.index) \(function.name)"
     }
 

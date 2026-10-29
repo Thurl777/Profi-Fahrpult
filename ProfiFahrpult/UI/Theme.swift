@@ -12,25 +12,29 @@ enum Theme {
                        alpha: alpha)
     }
 
-    /// Bildschirmhintergrund zwischen den Feldern
-    static let background = rgb(0xBFC3C9)
-    static let panelTop = rgb(0xEBECEE)
-    static let panelBottom = rgb(0xD3D5D9)
+    /// Grau und Blau des ECoS-Displays, pixelgenau vom Bildschirmfoto abgenommen
+    static let ecosGray = rgb(0xB6B6B6)
+    static let ecosBlue = rgb(0x256DB7)
+
+    /// Hintergrund und Felder: einfarbig ECoS-Grau
+    static let background = ecosGray
+    static let panelTop = ecosGray
+    static let panelBottom = ecosGray
     static let panelBorder = rgb(0x8E9299)
     /// Eingabefelder und Lokbild
     static let inset = rgb(0xFAFAFB)
 
     /// Navigationsleisten (blau wie die Menüleiste)
-    static let titleTop = rgb(0x4C8AD9)
-    static let titleBottom = rgb(0x2D66B8)
+    static let titleTop = ecosBlue
+    static let titleBottom = ecosBlue
     /// Unterstrich unter den Feldüberschriften
-    static let titleLine = rgb(0x2B2D31)
+    static let titleLine = rgb(0x000000)
 
     /// Menüleiste oben
-    static let menuTop = rgb(0x4C8AD9)
-    static let menuBottom = rgb(0x2D66B8)
-    /// Statusleiste und Tastenleiste unter den Fahrreglern
-    static let bar = rgb(0x2D66B8)
+    static let menuTop = ecosBlue
+    static let menuBottom = ecosBlue
+    /// Statusleiste, Tastenleiste unter den Fahrreglern und Rahmen um die Fahrregler
+    static let bar = ecosBlue
 
     /// Anthrazitfarbene Taste mit hellem Rand (wie SELECT oder der Schraubenschlüssel)
     static let buttonTop = rgb(0x585B61)
@@ -38,11 +42,18 @@ enum Theme {
     static let buttonBorder = rgb(0xE4E5E8)
     static let buttonPressedTop = rgb(0x3A3C41)
     static let buttonPressedBottom = rgb(0x18191C)
-    /// Helle Taste (Funktionen)
-    static let lightTop = rgb(0xFCFCFD)
-    static let lightBottom = rgb(0xD5D7DB)
+    /// Helle Taste (Funktionen) wie im ECoS-Design aus PR #3: leicht bläulich mit
+    /// dunkelblauem Symbol, eingeschaltet gelb
+    static let lightTop = rgb(0xFBFDFF)
+    static let lightBottom = rgb(0xD3DFEF)
+    static let lightBorder = rgb(0x8EA6CF)
+    static let functionSymbol = rgb(0x1C2340)
+    static let functionNumber = rgb(0x4D5675)
+    static let functionDisabled = rgb(0x8C94AB)
+    static let functionKeyOn = rgb(0xF3E84A)
+    static let functionKeyOnDark = rgb(0xB8A51E)
 
-    static let accent = rgb(0x2D66B8)
+    static let accent = ecosBlue
     /// Gelb für Auswahl, Fahrtrichtung und eingeschaltete Funktionen
     static let functionOn = rgb(0xF5E21B)
     static let functionOnDark = rgb(0xB3A20D)
@@ -249,8 +260,8 @@ class ECoSButton: UIButton {
         }
         if isHighlighted {
             if style == .light && !isOn {
-                top = Theme.functionOn.withBrightnessFactor(0.9)
-                bottom = Theme.functionOnDark
+                top = Theme.functionKeyOn.withBrightnessFactor(0.9)
+                bottom = Theme.functionKeyOnDark
             } else if style == .normal && !isOn {
                 top = Theme.buttonPressedTop
                 bottom = Theme.buttonPressedBottom
@@ -273,7 +284,7 @@ class ECoSButton: UIButton {
         } else {
             let border: UIColor
             switch style {
-            case .light: border = Theme.panelBorder
+            case .light: border = Theme.lightBorder
             case .key: border = .black
             default: border = Theme.buttonBorder
             }
@@ -284,7 +295,7 @@ class ECoSButton: UIButton {
         if isOn && (style == .normal || style == .light) {
             titleColor = Theme.text
         } else {
-            titleColor = style == .light ? Theme.text : .white
+            titleColor = style == .light ? Theme.functionSymbol : .white
         }
         setTitleColor(titleColor, for: .normal)
         tintColor = titleColor
