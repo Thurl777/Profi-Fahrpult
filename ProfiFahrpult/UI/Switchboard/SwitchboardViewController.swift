@@ -272,7 +272,7 @@ final class AccessorySymbolView: UIView {
         let cy = h / 2
         let lineW = max(4, min(w, h) * 0.09)
         let active = Theme.text
-        let inactive = Theme.rgb(0xA3B1CB)
+        let inactive = Theme.rgb(0xA9ACB2)
 
         func stroke(_ pts: [CGPoint], _ color: UIColor) {
             let p = UIBezierPath()

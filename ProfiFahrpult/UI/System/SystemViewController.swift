@@ -13,6 +13,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     private let screenSwitch = UISwitch()
     private let autoConnectSwitch = UISwitch()
     private let followSwitch = UISwitch()
+    private let faderSwitch = UISwitch()
     private let turnoutStepper = UIStepper()
 
     private enum Section: Int, CaseIterable {
@@ -54,7 +55,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         screenSwitch.isOn = settings.keepScreenOn
         autoConnectSwitch.isOn = settings.autoConnect
         followSwitch.isOn = settings.followHandhelds
-        for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch] {
+        faderSwitch.isOn = settings.showThrottleFader
+        for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch, faderSwitch] {
             s.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
         }
         turnoutStepper.minimumValue = 50
@@ -91,6 +93,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         settings.autoConnect = autoConnectSwitch.isOn
         settings.followHandhelds = followSwitch.isOn
         client.receiveAllLocoInfo = settings.followHandhelds
+        settings.showThrottleFader = faderSwitch.isOn
         settings.turnoutSwitchTime = Int(turnoutStepper.value)
         client.turnoutSwitchTime = settings.turnoutSwitchTime
         UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
@@ -120,11 +123,12 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
 
     // MARK: Zeilen
 
-    private enum Row {
+    private enum Row: Equatable {
         case host, port, connect, status
         case hardware, firmware, serial, xbus
         case mainCurrent, progCurrent, filteredCurrent, temperature, supply, track, flags
-        case stopMode, directionStops, followHandhelds, keepScreen, autoConnect, turnoutTime, simulatorHint
+        case stopMode, directionStops, followHandhelds, showFader, keepScreen, autoConnect, turnoutTime
+        case contactTrack, simulatorHint
     }
 
     private func rows(_ section: Section) -> [Row] {
@@ -132,8 +136,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .connection: return [.host, .port, .connect, .status]
         case .station: return [.hardware, .firmware, .serial, .xbus]
         case .state: return [.mainCurrent, .progCurrent, .filteredCurrent, .temperature, .supply, .track, .flags]
-        case .settings: return [.stopMode, .directionStops, .followHandhelds, .keepScreen, .autoConnect, .turnoutTime,
-                                .simulatorHint]
+        case .settings: return [.stopMode, .directionStops, .followHandhelds, .showFader, .keepScreen, .autoConnect,
+                                .turnoutTime, .contactTrack, .simulatorHint]
         }
     }
 
@@ -253,10 +257,18 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .stopMode: return controlCell("STOP-Taste", stopModeControl, width: 330)
         case .directionStops: return controlCell("Richtungswechsel hält Lok an", directionSwitch)
         case .followHandhelds: return controlCell("Lokwechsel an Multimaus folgen", followSwitch)
+        case .showFader: return controlCell("Schieberegler neben Tacho anzeigen", faderSwitch)
         case .keepScreen: return controlCell("Bildschirm nicht sperren", screenSwitch)
         case .autoConnect: return controlCell("Beim Start automatisch verbinden", autoConnectSwitch)
         case .turnoutTime:
             let cell = controlCell("Schaltzeit Weichen: \(settings.turnoutSwitchTime) ms", turnoutStepper)
+            return cell
+        case .contactTrack:
+            let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
+            Theme.styleCell(cell)
+            cell.textLabel?.text = "Messgleis für Geschwindigkeitsmessung"
+            cell.detailTextLabel?.text = settings.contactTrackConfigured ? "eingerichtet" : "nicht eingerichtet"
+            cell.accessoryType = .disclosureIndicator
             return cell
         case .simulatorHint:
             let cell = valueCell("Testen ohne Z21", "tools/z21_simulator.py")
@@ -266,8 +278,13 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if rows(Section(rawValue: indexPath.section)!)[indexPath.row] == .connect {
+        switch rows(Section(rawValue: indexPath.section)!)[indexPath.row] {
+        case .connect:
             connectTapped()
+        case .contactTrack:
+            navigationController?.pushViewController(ContactTrackConfigViewController(), animated: true)
+        default:
+            break
         }
     }
 

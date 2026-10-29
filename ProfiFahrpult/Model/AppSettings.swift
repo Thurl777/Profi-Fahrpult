@@ -27,6 +27,12 @@ final class AppSettings {
         static let modelScale = "measure.scale"
         static let measureDistance = "measure.distanceCm"
         static let followHandhelds = "ui.followHandhelds"
+        static let showThrottleFader = "ui.showThrottleFader"
+        static let contactAddressLeft = "measure.contact.left"
+        static let contactAddressMiddle = "measure.contact.middle"
+        static let contactAddressRight = "measure.contact.right"
+        static let contactDistanceLeftMiddle = "measure.contact.distanceLM"
+        static let contactDistanceMiddleRight = "measure.contact.distanceMR"
     }
 
     private init() {
@@ -41,7 +47,13 @@ final class AppSettings {
             Key.autoConnect: true,
             Key.modelScale: ModelScale.h0.rawValue,
             Key.measureDistance: 100.0,
-            Key.followHandhelds: true
+            Key.followHandhelds: true,
+            Key.showThrottleFader: true,
+            Key.contactAddressLeft: 0,
+            Key.contactAddressMiddle: 0,
+            Key.contactAddressRight: 0,
+            Key.contactDistanceLeftMiddle: 50.0,
+            Key.contactDistanceMiddleRight: 50.0
         ])
     }
 
@@ -109,6 +121,56 @@ final class AppSettings {
     var followHandhelds: Bool {
         get { return defaults.bool(forKey: Key.followHandhelds) }
         set { defaults.set(newValue, forKey: Key.followHandhelds) }
+    }
+
+    /// Schieberegler links/rechts neben dem Tacho im Fahrbildschirm anzeigen
+    var showThrottleFader: Bool {
+        get { return defaults.bool(forKey: Key.showThrottleFader) }
+        set {
+            defaults.set(newValue, forKey: Key.showThrottleFader)
+            NotificationCenter.default.post(name: .throttleFaderVisibilityChanged, object: self)
+        }
+    }
+
+    /// Melderadressen der Kontaktmessstrecke (1…160, 0 = nicht zugeordnet)
+    var contactAddressLeft: Int {
+        get { return defaults.integer(forKey: Key.contactAddressLeft) }
+        set { defaults.set(newValue, forKey: Key.contactAddressLeft) }
+    }
+
+    var contactAddressMiddle: Int {
+        get { return defaults.integer(forKey: Key.contactAddressMiddle) }
+        set { defaults.set(newValue, forKey: Key.contactAddressMiddle) }
+    }
+
+    var contactAddressRight: Int {
+        get { return defaults.integer(forKey: Key.contactAddressRight) }
+        set { defaults.set(newValue, forKey: Key.contactAddressRight) }
+    }
+
+    /// Streckenlänge zwischen linkem und mittlerem Melder in cm
+    var contactDistanceLeftMiddleCm: Double {
+        get {
+            let d = defaults.double(forKey: Key.contactDistanceLeftMiddle)
+            return d > 0 ? d : 50
+        }
+        set { defaults.set(newValue, forKey: Key.contactDistanceLeftMiddle) }
+    }
+
+    /// Streckenlänge zwischen mittlerem und rechtem Melder in cm
+    var contactDistanceMiddleRightCm: Double {
+        get {
+            let d = defaults.double(forKey: Key.contactDistanceMiddleRight)
+            return d > 0 ? d : 50
+        }
+        set { defaults.set(newValue, forKey: Key.contactDistanceMiddleRight) }
+    }
+
+    /// Die Kontaktmessstrecke ist vollständig eingerichtet (alle drei Melder zugeordnet)
+    var contactTrackConfigured: Bool {
+        return contactAddressLeft > 0 && contactAddressMiddle > 0 && contactAddressRight > 0
+            && contactAddressLeft != contactAddressMiddle && contactAddressMiddle != contactAddressRight
+            && contactAddressLeft != contactAddressRight
     }
 
     func throttleLocoID(_ throttle: Int) -> String? {

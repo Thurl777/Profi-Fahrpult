@@ -2,16 +2,19 @@ import UIKit
 
 /// Ein Fahrregler wie auf dem Display der ECoS: Lokname mit Unterstrich, darunter
 /// Richtungstasten links/rechts neben dem Lokbild, der schwarze Tacho mit gelbem Zeiger,
-/// Funktionstasten und unten die blaue Tastenleiste mit „Lok wählen“ und den Funktionsseiten.
+/// optional ein Schieberegler an der Außenseite, Funktionstasten und unten die blaue
+/// Tastenleiste mit Reglertausch, Lokeinstellungen und den Funktionsseiten.
 final class ThrottleView: PanelView, Z21ClientObserver {
 
     let index: Int
     private(set) var loco: Locomotive?
 
-    /// Wird aufgerufen, wenn der Benutzer eine andere Lok wählen möchte
+    /// Wird aufgerufen, wenn der Benutzer eine andere Lok wählen möchte (Tippen auf das Lokbild)
     var onSelectLoco: ((ThrottleView, UIView) -> Void)?
     /// Loks der beiden Regler tauschen (falls die Multimaus-Kopplung den falschen Regler erwischt hat)
     var onSwap: (() -> Void)?
+    /// Einstellungen der Lok dieses Reglers öffnen
+    var onEditLoco: ((ThrottleView, Locomotive) -> Void)?
     /// Der Regler wurde in der App bedient
     var onUserActivity: ((ThrottleView) -> Void)?
 
@@ -20,14 +23,12 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private let locoImage = LocoImageView()
     private let infoLabel = UILabel()
     private let busyLabel = UILabel()
-    private let selectButton = ECoSButton(title: "Lok wählen", style: .normal)
     private let swapButton = ECoSButton(title: "⇄", style: .normal)
+    private let settingsButton = ECoSButton(title: nil, style: .normal)
     private let tacho = TachometerView()
+    private let fader = ThrottleFaderView()
     private let reverseButton = ECoSButton(title: "◀", style: .normal)
     private let forwardButton = ECoSButton(title: "▶", style: .normal)
-    private let minusButton = ECoSButton(title: "−", style: .normal)
-    private let plusButton = ECoSButton(title: "+", style: .normal)
-    private let haltButton = ECoSButton(title: "HALT", style: .red)
     private var functionKeys: [FunctionKey] = []
     private var pageButtons: [ECoSButton] = []
     private let separator = UIView()
@@ -41,12 +42,17 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     /// So lange nach einer Bedienung am Handregler wird „Handregler aktiv“ angezeigt
     private static let handheldHintTime: TimeInterval = 5
 
+    /// Der linke Regler hat den Schieberegler links vom Tacho, der rechte rechts davon
+    private var faderOnLeft: Bool { return index % 2 == 0 }
+
     init(index: Int) {
         self.index = index
         super.init(title: "Fahrregler \(index + 1)")
         titleLabel.font = Theme.font(16, bold: true)
         setupViews()
         client.addObserver(self)
+        NotificationCenter.default.addObserver(self, selector: #selector(faderVisibilityChanged),
+                                               name: .throttleFaderVisibilityChanged, object: nil)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -55,6 +61,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     deinit {
         client.removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: Aufbau
@@ -70,37 +77,38 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         separator.backgroundColor = Theme.panelBorder
         bottomBar.backgroundColor = Theme.bar
 
-        ([bottomBar, locoImage, infoLabel, busyLabel, selectButton, swapButton, tacho,
-          reverseButton, minusButton, haltButton, plusButton, forwardButton, separator] as [UIView]).forEach {
+        ([bottomBar, locoImage, infoLabel, busyLabel, swapButton, settingsButton, tacho, fader,
+          reverseButton, forwardButton, separator] as [UIView]).forEach {
             contentView.addSubview($0)
         }
 
-        selectButton.titleLabel?.font = Theme.font(13, bold: true)
-        selectButton.addTarget(self, action: #selector(selectTapped), for: .touchUpInside)
         swapButton.titleLabel?.font = Theme.font(22, bold: true)
+        swapButton.accessibilityLabel = "Regler tauschen"
         swapButton.addTarget(self, action: #selector(swapTapped), for: .touchUpInside)
+        settingsButton.setImage(ThrottleView.wrenchIcon(size: 22, color: .white), for: .normal)
+        settingsButton.accessibilityLabel = "Lokeinstellungen"
+        settingsButton.addTarget(self, action: #selector(settingsTapped), for: .touchUpInside)
         let imageTap = UITapGestureRecognizer(target: self, action: #selector(selectTapped))
         locoImage.addGestureRecognizer(imageTap)
 
         tacho.addTarget(self, action: #selector(tachoChanged), for: .valueChanged)
         tacho.addTarget(self, action: #selector(tachoEnded), for: .editingDidEnd)
+        // Ersatz für die frühere HALT-Taste: langes Drücken auf den Tacho = Nothalt dieser Lok
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(tachoLongPressed(_:)))
+        longPress.minimumPressDuration = 0.6
+        tacho.addGestureRecognizer(longPress)
+
+        fader.scaleSide = faderOnLeft ? .right : .left
+        fader.addTarget(self, action: #selector(faderChanged), for: .valueChanged)
+        fader.addTarget(self, action: #selector(tachoEnded), for: .editingDidEnd)
+        fader.isHidden = !AppSettings.shared.showThrottleFader
 
         for b in [reverseButton, forwardButton] {
             b.titleLabel?.font = Theme.font(22, bold: true)
             b.onColor = Theme.functionOn
         }
-        for b in [minusButton, plusButton] {
-            b.titleLabel?.font = Theme.font(28, bold: true)
-        }
-        haltButton.titleLabel?.font = Theme.font(18, bold: true)
         reverseButton.addTarget(self, action: #selector(reverseTapped), for: .touchUpInside)
         forwardButton.addTarget(self, action: #selector(forwardTapped), for: .touchUpInside)
-        minusButton.addTarget(self, action: #selector(minusTapped), for: .touchUpInside)
-        plusButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
-        haltButton.addTarget(self, action: #selector(haltTapped), for: .touchUpInside)
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(haltLongPressed(_:)))
-        longPress.minimumPressDuration = 0.6
-        haltButton.addGestureRecognizer(longPress)
 
         for i in 0..<ThrottleView.keysPerPage {
             let key = FunctionKey(frame: .zero)
@@ -140,15 +148,15 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         infoLabel.frame = CGRect(x: pad, y: locoImage.frame.maxY + 4, width: w - 2 * pad, height: 18)
         busyLabel.frame = CGRect(x: pad, y: infoLabel.frame.maxY, width: w - 2 * pad, height: 16)
 
-        // Blaue Tastenleiste unten: Lok wählen, ⇄ und Funktionsseiten
+        // Blaue Tastenleiste unten: ⇄ (statt „Lok wählen“), Lokeinstellungen (statt ⇄) und Funktionsseiten
         let barH: CGFloat = 50
         bottomBar.frame = CGRect(x: 0, y: h - barH, width: w, height: barH)
-        let swapW: CGFloat = 44
-        let barButtons = [selectButton] + pageButtons
-        let bw = floor((w - 2 * pad - swapW - CGFloat(barButtons.count) * gap) / CGFloat(barButtons.count))
+        let smallW: CGFloat = 44
+        let wideButtons = [swapButton] + pageButtons
+        let bw = floor((w - 2 * pad - smallW - CGFloat(wideButtons.count) * gap) / CGFloat(wideButtons.count))
         var x = pad
-        for b in [selectButton, swapButton] + pageButtons {
-            let bWidth = b === swapButton ? swapW : bw
+        for b in [swapButton, settingsButton] + pageButtons {
+            let bWidth = b === settingsButton ? smallW : bw
             b.frame = CGRect(x: x, y: h - barH + 7, width: bWidth, height: barH - 14)
             x += bWidth + gap
         }
@@ -166,20 +174,23 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         }
         separator.frame = CGRect(x: pad, y: fnTop - gap, width: w - 2 * pad, height: 1)
 
-        // − HALT + über den Funktionen
-        let ctrlH: CGFloat = 48
-        let ctrlTop = fnTop - 2 * gap - ctrlH
-        let smallW = floor((w - 2 * pad - 2 * gap) / 4)
-        let haltW = w - 2 * pad - 2 * gap - 2 * smallW
-        minusButton.frame = CGRect(x: pad, y: ctrlTop, width: smallW, height: ctrlH)
-        haltButton.frame = CGRect(x: minusButton.frame.maxX + gap, y: ctrlTop, width: haltW, height: ctrlH)
-        plusButton.frame = CGRect(x: haltButton.frame.maxX + gap, y: ctrlTop, width: smallW, height: ctrlH)
-
-        // Tacho füllt den Rest
+        // Tacho füllt den Platz der früheren − HALT + Zeile mit, der Schieberegler steht an der Außenseite
         let tachoTop = busyLabel.frame.maxY + 2
-        let avail = max(80, ctrlTop - gap - tachoTop)
-        let size = min(w - 2 * pad, avail)
-        tacho.frame = CGRect(x: (w - size) / 2, y: tachoTop + (avail - size) / 2, width: size, height: size)
+        let avail = max(80, separator.frame.minY - gap - tachoTop)
+        let faderW: CGFloat = fader.isHidden ? 0 : 64
+        let areaX = faderOnLeft ? pad + faderW : pad
+        let areaW = w - 2 * pad - faderW
+        let size = min(areaW, avail)
+        tacho.frame = CGRect(x: areaX + (areaW - size) / 2, y: tachoTop + (avail - size) / 2, width: size, height: size)
+        if !fader.isHidden {
+            let fx = faderOnLeft ? pad : w - pad - faderW
+            fader.frame = CGRect(x: fx, y: tacho.frame.minY, width: faderW, height: size)
+        }
+    }
+
+    @objc private func faderVisibilityChanged() {
+        fader.isHidden = !AppSettings.shared.showThrottleFader
+        setNeedsLayout()
     }
 
     // MARK: Lok
@@ -190,18 +201,23 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         title = loco?.name ?? "Fahrregler \(index + 1) – keine Lok"
         locoImage.image = loco.flatMap { LocoStore.shared.image(for: $0) }
         locoImage.isDimmed = !active
+        let maxStep = (loco?.speedSteps ?? .steps128).maxStep
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120
-        tacho.maxStep = (loco?.speedSteps ?? .steps128).maxStep
+        tacho.maxStep = maxStep
         tacho.addressText = loco.map { String(format: "[%04d]", Int($0.address)) }
         tacho.speedCurve = loco?.speedCurve
         tacho.isActive = active
         tacho.isEnabled = active
-        [reverseButton, forwardButton, minusButton, plusButton, haltButton].forEach { $0.isEnabled = active }
+        fader.maxStep = maxStep
+        fader.isActive = active
+        fader.isEnabled = active
+        [reverseButton, forwardButton, settingsButton].forEach { $0.isEnabled = active }
         functionKeys.forEach { $0.isEnabled = active }
         if let loco = loco {
             client.subscribeLoco(loco.address)
         } else {
             tacho.step = 0
+            fader.step = 0
         }
         updateInfoLabel()
         updateFromClient(force: true)
@@ -214,7 +230,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     private func updateInfoLabel() {
         guard let loco = loco else {
-            infoLabel.text = "Tippen Sie auf „Lok wählen“"
+            infoLabel.text = "Zum Lok wählen auf das Lokbild tippen"
             return
         }
         var text = "Adresse \(loco.address) · \(loco.speedSteps.title)"
@@ -227,11 +243,12 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     private func updateFromClient(force: Bool = false) {
         let info = currentInfo
         let isForward = info?.forward ?? true
-        let userIsDriving = tacho.isTracking || Date().timeIntervalSince(lastUserSpeedChange) < 0.6
+        let userIsDriving = tacho.isTracking || fader.isTracking || Date().timeIntervalSince(lastUserSpeedChange) < 0.6
         if force || !userIsDriving {
             tacho.step = info?.step ?? 0
             tacho.forward = isForward
             tacho.emergencyStop = info?.emergencyStop ?? false
+            fader.step = tacho.step
         }
         forwardButton.isOn = loco != nil && isForward
         reverseButton.isOn = loco != nil && !isForward
@@ -280,20 +297,30 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         tacho.step = clamped
         tacho.forward = forward
         tacho.emergencyStop = false
+        fader.step = clamped
         forwardButton.isOn = forward
         reverseButton.isOn = !forward
     }
 
     @objc private func selectTapped() {
-        onSelectLoco?(self, selectButton)
+        onSelectLoco?(self, locoImage)
     }
 
     @objc private func swapTapped() {
         onSwap?()
     }
 
+    @objc private func settingsTapped() {
+        guard let loco = loco else { return }
+        onEditLoco?(self, loco)
+    }
+
     @objc private func tachoChanged() {
         drive(step: tacho.step, forward: tacho.forward)
+    }
+
+    @objc private func faderChanged() {
+        drive(step: fader.step, forward: tacho.forward)
     }
 
     @objc private func tachoEnded() {
@@ -315,25 +342,14 @@ final class ThrottleView: PanelView, Z21ClientObserver {
     @objc private func reverseTapped() { changeDirection(forward: false) }
     @objc private func forwardTapped() { changeDirection(forward: true) }
 
-    @objc private func minusTapped() {
-        drive(step: tacho.step - 1, forward: tacho.forward)
-    }
-
-    @objc private func plusTapped() {
-        drive(step: tacho.step + 1, forward: tacho.forward)
-    }
-
-    @objc private func haltTapped() {
-        drive(step: 0, forward: tacho.forward)
-    }
-
-    @objc private func haltLongPressed(_ gr: UILongPressGestureRecognizer) {
+    @objc private func tachoLongPressed(_ gr: UILongPressGestureRecognizer) {
         guard gr.state == .began, let loco = loco else { return }
         lastUserSpeedChange = Date()
         onUserActivity?(self)
         client.emergencyStopLoco(loco.address)
         tacho.step = 0
         tacho.emergencyStop = true
+        fader.step = 0
     }
 
     @objc private func pageTapped(_ sender: ECoSButton) {
@@ -371,6 +387,27 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         let fn = functionIndex(for: key)
         if loco.function(fn).momentary {
             client.setLocoFunction(address: loco.address, function: fn, on: false)
+        }
+    }
+
+    // MARK: Symbol
+
+    /// Schraubenschlüssel wie auf der Einstellungstaste der ECoS
+    static func wrenchIcon(size: CGFloat, color: UIColor) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+        return renderer.image { context in
+            let ctx = context.cgContext
+            ctx.translateBy(x: size / 2, y: size / 2)
+            ctx.rotate(by: .pi / 4)
+            color.setFill()
+            let handle = UIBezierPath(roundedRect: CGRect(x: -size * 0.09, y: -size * 0.1, width: size * 0.18, height: size * 0.56),
+                                      cornerRadius: size * 0.09)
+            handle.fill()
+            let headR = size * 0.22
+            UIBezierPath(ovalIn: CGRect(x: -headR, y: -size * 0.24 - headR, width: headR * 2, height: headR * 2)).fill()
+            // Maulöffnung ausstanzen
+            ctx.setBlendMode(.clear)
+            UIBezierPath(rect: CGRect(x: -size * 0.08, y: -size * 0.5, width: size * 0.16, height: size * 0.28)).fill()
         }
     }
 
