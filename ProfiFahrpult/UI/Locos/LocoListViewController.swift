@@ -117,7 +117,7 @@ final class LocoCell: UITableViewCell {
         detailLabel.font = Theme.font(14)
         detailLabel.textColor = Theme.textDim
         throttleLabel.font = Theme.font(13, bold: true)
-        throttleLabel.textColor = Theme.functionOn
+        throttleLabel.textColor = Theme.accent
         throttleLabel.textAlignment = .right
         ([locoImage, nameLabel, detailLabel, throttleLabel] as [UIView]).forEach { contentView.addSubview($0) }
     }

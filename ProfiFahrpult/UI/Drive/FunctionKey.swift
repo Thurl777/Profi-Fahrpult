@@ -1,6 +1,7 @@
 import UIKit
 
-/// Funktionstaste mit Symbol und Funktionsnummer
+/// Funktionstaste mit Symbol und Funktionsnummer: hell mit dunkelblauem Symbol wie die
+/// Funktionssymbole der ECoS, eingeschaltet gelb.
 final class FunctionKey: ECoSButton {
 
     private(set) var function = LocoFunction(index: 0, name: "", icon: .generic, momentary: false)
@@ -20,6 +21,7 @@ final class FunctionKey: ECoSButton {
         addSubview(iconView)
         addSubview(numberLabel)
         addSubview(nameLabel)
+        style = .light
         onColor = Theme.functionOn
     }
 
@@ -31,6 +33,10 @@ final class FunctionKey: ECoSButton {
         didSet { updateContent() }
     }
 
+    override var isEnabled: Bool {
+        didSet { updateContent() }
+    }
+
     func configure(_ function: LocoFunction, on: Bool) {
         self.function = function
         self.isOn = on
@@ -38,7 +44,7 @@ final class FunctionKey: ECoSButton {
     }
 
     private func updateContent() {
-        let color: UIColor = isOn ? .black : .white
+        let color: UIColor = isEnabled ? Theme.text : Theme.textDark
         let iconSize = floor(min(bounds.width, bounds.height) * 0.55)
         let img = iconSize > 8 ? FunctionIconRenderer.image(function.icon, size: iconSize, color: color) : nil
         iconView.image = img
@@ -47,7 +53,7 @@ final class FunctionKey: ECoSButton {
         nameLabel.text = "F\(function.index)"
         nameLabel.textColor = color
         numberLabel.text = img != nil ? "F\(function.index)" : (function.momentary ? "M" : "")
-        numberLabel.textColor = isOn ? UIColor.black.withAlphaComponent(0.7) : Theme.textDim
+        numberLabel.textColor = Theme.textDim
         accessibilityLabel = "F\(function.index) \(function.name)"
     }
 

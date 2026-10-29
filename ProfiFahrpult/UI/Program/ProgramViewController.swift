@@ -37,7 +37,7 @@ final class ProgramViewController: UIViewController, UITextFieldDelegate, Z21Cli
         tf.font = Theme.monoFont(24, bold: true)
         tf.textAlignment = .center
         tf.keyboardType = .numberPad
-        tf.keyboardAppearance = .dark
+        tf.keyboardAppearance = .light
         tf.layer.cornerRadius = 4
         tf.layer.borderColor = Theme.panelBorder.cgColor
         tf.layer.borderWidth = 1
