@@ -53,6 +53,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         client.addObserver(self)
         NotificationCenter.default.addObserver(self, selector: #selector(faderVisibilityChanged),
                                                name: .throttleFaderVisibilityChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(tachoSettingsChanged),
+                                               name: .tachoSettingsChanged, object: nil)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -102,6 +104,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         fader.addTarget(self, action: #selector(faderChanged), for: .valueChanged)
         fader.addTarget(self, action: #selector(tachoEnded), for: .editingDidEnd)
         fader.isHidden = !AppSettings.shared.showThrottleFader
+        applyTachoSettings()
 
         for b in [reverseButton, forwardButton] {
             b.titleLabel?.font = Theme.font(22, bold: true)
@@ -195,6 +198,17 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         setNeedsLayout()
     }
 
+    /// Gleitende Tachonadel: der Tacho ist dann reine Anzeige, gefahren wird mit dem Schieberegler
+    /// oder an der Multimaus. Langes Drücken auf den Tacho bleibt Nothalt.
+    private func applyTachoSettings() {
+        tacho.smoothNeedle = AppSettings.shared.smoothTacho
+        tacho.needleDelay = AppSettings.shared.tachoDelay
+    }
+
+    @objc private func tachoSettingsChanged() {
+        applyTachoSettings()
+    }
+
     // MARK: Lok
 
     func setLoco(_ loco: Locomotive?) {
@@ -222,6 +236,8 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         }
         updateInfoLabel()
         updateFromClient(force: true)
+        // Beim Lokwechsel steht der Zeiger sofort auf der Fahrstufe der neuen Lok
+        tacho.snapNeedle()
     }
 
     private var currentInfo: LocoInfo? {

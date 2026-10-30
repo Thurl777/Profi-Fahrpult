@@ -36,6 +36,7 @@
 		F493280AB5638DC51BCEF09E /* SpeedCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */; };
 		E29E927D021172E76A73CDED /* HandheldFollow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EEC13729D977BB09AA90A9 /* HandheldFollow.swift */; };
 		F5AAB596A107677D1A3170B0 /* SpeedCurveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A71E85E5F9DFA0A8D7A08CD /* SpeedCurveViewController.swift */; };
+		7A1E5C0D2B9F4E6A8C3D1F01 /* NeedleDamper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1E5C0D2B9F4E6A8C3D1F02 /* NeedleDamper.swift */; };
 		C00D5A5C9119E29CF4396A3E /* ContactSpeedMeasurer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8D797B42D9750EEEB7287F /* ContactSpeedMeasurer.swift */; };
 		2C90BF36E461027A979AF8B8 /* ThrottleFaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7179633408CDC6C01087E8BB /* ThrottleFaderView.swift */; };
 		DA57C95CC65C7BD04E751BF7 /* ContactTrackConfigViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93661B0013B099F2F272392E /* ContactTrackConfigViewController.swift */; };
@@ -73,6 +74,7 @@
 		EE34930D227E482E93E67557 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EEC623D9D5CE326E737B471E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F971F5D662DF8C9C320713F1 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7A1E5C0D2B9F4E6A8C3D1F02 /* NeedleDamper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDamper.swift; sourceTree = "<group>"; };
 		4C8D797B42D9750EEEB7287F /* ContactSpeedMeasurer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSpeedMeasurer.swift; sourceTree = "<group>"; };
 		7179633408CDC6C01087E8BB /* ThrottleFaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrottleFaderView.swift; sourceTree = "<group>"; };
 		93661B0013B099F2F272392E /* ContactTrackConfigViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTrackConfigViewController.swift; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				450D99C7F4E161F30B6A35BE /* SpeedCurve.swift */,
 				14EEC13729D977BB09AA90A9 /* HandheldFollow.swift */,
 				4C8D797B42D9750EEEB7287F /* ContactSpeedMeasurer.swift */,
+				7A1E5C0D2B9F4E6A8C3D1F02 /* NeedleDamper.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -339,6 +342,7 @@
 				91199F0AD282C71A69D3D874 /* Z21Client.swift in Sources */,
 				E88804BA5F236B5D28BC205C /* Z21Protocol.swift in Sources */,
 				C00D5A5C9119E29CF4396A3E /* ContactSpeedMeasurer.swift in Sources */,
+				7A1E5C0D2B9F4E6A8C3D1F01 /* NeedleDamper.swift in Sources */,
 				2C90BF36E461027A979AF8B8 /* ThrottleFaderView.swift in Sources */,
 				DA57C95CC65C7BD04E751BF7 /* ContactTrackConfigViewController.swift in Sources */,
 			);

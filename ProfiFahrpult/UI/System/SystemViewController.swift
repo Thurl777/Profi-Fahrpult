@@ -14,6 +14,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     private let autoConnectSwitch = UISwitch()
     private let followSwitch = UISwitch()
     private let faderSwitch = UISwitch()
+    private let smoothTachoSwitch = UISwitch()
+    private let tachoDelaySlider = UISlider()
     private let turnoutStepper = UIStepper()
     private let controlCells = ControlCellCache()
 
@@ -57,9 +59,16 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         autoConnectSwitch.isOn = settings.autoConnect
         followSwitch.isOn = settings.followHandhelds
         faderSwitch.isOn = settings.showThrottleFader
-        for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch, faderSwitch] {
+        smoothTachoSwitch.isOn = settings.smoothTacho
+        for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch, faderSwitch, smoothTachoSwitch] {
             s.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
         }
+        tachoDelaySlider.minimumValue = Float(AppSettings.tachoDelayRange.lowerBound)
+        tachoDelaySlider.maximumValue = Float(AppSettings.tachoDelayRange.upperBound)
+        tachoDelaySlider.value = Float(settings.tachoDelay)
+        tachoDelaySlider.minimumTrackTintColor = Theme.accent
+        tachoDelaySlider.isEnabled = settings.smoothTacho
+        tachoDelaySlider.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
         turnoutStepper.minimumValue = 50
         turnoutStepper.maximumValue = 1000
         turnoutStepper.stepValue = 50
@@ -95,18 +104,35 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         settings.followHandhelds = followSwitch.isOn
         client.receiveAllLocoInfo = settings.followHandhelds
         settings.showThrottleFader = faderSwitch.isOn
+        if settings.smoothTacho != smoothTachoSwitch.isOn {
+            settings.smoothTacho = smoothTachoSwitch.isOn
+        }
+        tachoDelaySlider.isEnabled = smoothTachoSwitch.isOn
+        // auf Zehntelsekunden runden
+        let delay = (Double(tachoDelaySlider.value) * 10).rounded() / 10
+        if settings.tachoDelay != delay {
+            settings.tachoDelay = delay
+        }
         settings.turnoutSwitchTime = Int(turnoutStepper.value)
         client.turnoutSwitchTime = settings.turnoutSwitchTime
         UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
-        // Nur die Beschriftung ändern, die Zeile nicht neu laden: Der Stepper wird gerade bedient
+        // Nur die Beschriftung ändern, die Zeile nicht neu laden: Stepper/Regler werden gerade bedient
         if let row = rowIndex(of: .turnoutTime),
            let cell = tableView.cellForRow(at: IndexPath(row: row, section: Section.settings.rawValue)) {
             cell.textLabel?.text = turnoutTimeTitle
+        }
+        if let row = rowIndex(of: .tachoDelay),
+           let cell = tableView.cellForRow(at: IndexPath(row: row, section: Section.settings.rawValue)) {
+            cell.textLabel?.text = tachoDelayTitle
         }
     }
 
     private var turnoutTimeTitle: String {
         return "Schaltzeit Weichen: \(settings.turnoutSwitchTime) ms"
+    }
+
+    private var tachoDelayTitle: String {
+        return String(format: "Verzögerung Tachonadel: %.1f s", settings.tachoDelay)
     }
 
     private func connectTapped() {
@@ -134,7 +160,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case host, port, connect, status
         case hardware, firmware, serial, xbus
         case mainCurrent, progCurrent, filteredCurrent, temperature, supply, track, flags
-        case stopMode, directionStops, followHandhelds, showFader, keepScreen, autoConnect, turnoutTime
+        case stopMode, directionStops, followHandhelds, showFader, smoothTacho, tachoDelay, keepScreen, autoConnect
+        case turnoutTime
         case contactTrack, simulatorHint
     }
 
@@ -143,8 +170,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .connection: return [.host, .port, .connect, .status]
         case .station: return [.hardware, .firmware, .serial, .xbus]
         case .state: return [.mainCurrent, .progCurrent, .filteredCurrent, .temperature, .supply, .track, .flags]
-        case .settings: return [.stopMode, .directionStops, .followHandhelds, .showFader, .keepScreen, .autoConnect,
-                                .turnoutTime, .contactTrack, .simulatorHint]
+        case .settings: return [.stopMode, .directionStops, .followHandhelds, .showFader, .smoothTacho, .tachoDelay,
+                                .keepScreen, .autoConnect, .turnoutTime, .contactTrack, .simulatorHint]
         }
     }
 
@@ -176,7 +203,11 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         if Section(rawValue: section) == .settings {
             return "Lokwechsel an Multimaus folgen: Wird an einer Multimaus eine andere Lok gefahren oder eine "
                 + "Funktion geschaltet, übernimmt der Regler sie, der am längsten nicht benutzt wurde. "
-                + "Mit ⇄ lassen sich die beiden Regler tauschen."
+                + "Mit ⇄ lassen sich die beiden Regler tauschen.\n\n"
+                + "Tachonadel gleitend: Der Tacho zeigt die Geschwindigkeit nur noch an, die Nadel bewegt sich "
+                + "gleichmäßig zur neuen Fahrstufe und lässt sich nicht mehr drehen. Eingestellt wird mit dem "
+                + "Schieberegler oder – wenn er ausgeblendet ist – nur an der Multimaus. Langes Drücken auf den "
+                + "Tacho bleibt Nothalt der Lok. Die Verzögerung ist ungefähr die Zeit, bis die Nadel steht."
         }
         return nil
     }
@@ -268,6 +299,8 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         case .directionStops: return controlCell("Richtungswechsel hält Lok an", directionSwitch)
         case .followHandhelds: return controlCell("Lokwechsel an Multimaus folgen", followSwitch)
         case .showFader: return controlCell("Schieberegler neben Tacho anzeigen", faderSwitch)
+        case .smoothTacho: return controlCell("Tachonadel gleitend (nur Anzeige)", smoothTachoSwitch)
+        case .tachoDelay: return controlCell(tachoDelayTitle, tachoDelaySlider, width: 220)
         case .keepScreen: return controlCell("Bildschirm nicht sperren", screenSwitch)
         case .autoConnect: return controlCell("Beim Start automatisch verbinden", autoConnectSwitch)
         case .turnoutTime: return controlCell(turnoutTimeTitle, turnoutStepper)

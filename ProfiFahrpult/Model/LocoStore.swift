@@ -5,6 +5,7 @@ extension Notification.Name {
     static let throttleAssignmentChanged = Notification.Name("ThrottleAssignmentChanged")
     static let accessoryStoreChanged = Notification.Name("AccessoryStoreChanged")
     static let throttleFaderVisibilityChanged = Notification.Name("ThrottleFaderVisibilityChanged")
+    static let tachoSettingsChanged = Notification.Name("TachoSettingsChanged")
 }
 
 /// Lokbibliothek, gespeichert als JSON im Dokumentenordner der App.

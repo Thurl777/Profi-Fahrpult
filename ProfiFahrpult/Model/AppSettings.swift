@@ -28,6 +28,8 @@ final class AppSettings {
         static let measureDistance = "measure.distanceCm"
         static let followHandhelds = "ui.followHandhelds"
         static let showThrottleFader = "ui.showThrottleFader"
+        static let smoothTacho = "ui.smoothTacho"
+        static let tachoDelay = "ui.tachoDelay"
         static let contactAddressLeft = "measure.contact.left"
         static let contactAddressMiddle = "measure.contact.middle"
         static let contactAddressRight = "measure.contact.right"
@@ -49,6 +51,8 @@ final class AppSettings {
             Key.measureDistance: 100.0,
             Key.followHandhelds: true,
             Key.showThrottleFader: true,
+            Key.smoothTacho: true,
+            Key.tachoDelay: AppSettings.defaultTachoDelay,
             Key.contactAddressLeft: 0,
             Key.contactAddressMiddle: 0,
             Key.contactAddressRight: 0,
@@ -129,6 +133,32 @@ final class AppSettings {
         set {
             defaults.set(newValue, forKey: Key.showThrottleFader)
             NotificationCenter.default.post(name: .throttleFaderVisibilityChanged, object: self)
+        }
+    }
+
+    static let defaultTachoDelay = 1.0
+    static let tachoDelayRange: ClosedRange<Double> = 0.2...5
+
+    /// Tacho als reine Anzeige: Die Nadel gleitet gleichmäßig zur Fahrstufe und lässt sich nicht
+    /// per Touch drehen. Eingestellt wird mit dem Schieberegler (oder an der Multimaus).
+    var smoothTacho: Bool {
+        get { return defaults.bool(forKey: Key.smoothTacho) }
+        set {
+            defaults.set(newValue, forKey: Key.smoothTacho)
+            NotificationCenter.default.post(name: .tachoSettingsChanged, object: self)
+        }
+    }
+
+    /// Verzögerung der Tachonadel in Sekunden (ungefähr die Zeit bis zum Ziel)
+    var tachoDelay: Double {
+        get {
+            let d = defaults.double(forKey: Key.tachoDelay)
+            let range = AppSettings.tachoDelayRange
+            return d > 0 ? min(max(d, range.lowerBound), range.upperBound) : AppSettings.defaultTachoDelay
+        }
+        set {
+            defaults.set(newValue, forKey: Key.tachoDelay)
+            NotificationCenter.default.post(name: .tachoSettingsChanged, object: self)
         }
     }
 

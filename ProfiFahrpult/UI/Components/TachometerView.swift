@@ -1,14 +1,19 @@
 import UIKit
 
 /// Rundinstrument wie der Tacho der ECoS: schwarzes Zifferblatt mit grauem Ring,
-/// weißen Teilstrichen und gelbem Zeiger. Wird wie ein Drehknopf bedient:
-/// eine kreisende Bewegung auf dem Instrument ändert die Fahrstufe relativ.
+/// weißen Teilstrichen und gelbem Zeiger.
+///
+/// Zwei Betriebsarten:
+/// - Drehregler (`smoothNeedle = false`): eine kreisende Bewegung auf dem Instrument ändert die
+///   Fahrstufe relativ, der Zeiger springt von Fahrstufe zu Fahrstufe.
+/// - Anzeige (`smoothNeedle = true`): der Zeiger gleitet mit `needleDelay` gleichmäßig zur Fahrstufe
+///   und lässt sich nicht per Touch drehen. Eingestellt wird am Schieberegler oder an der Multimaus.
 final class TachometerView: UIControl {
 
     var maxStep: Int = 126 {
         didSet {
             step = min(step, maxStep)
-            setNeedsDisplay()
+            updateNeedleTarget()
         }
     }
 
@@ -16,7 +21,7 @@ final class TachometerView: UIControl {
         didSet {
             if oldValue != step {
                 accumulated = Double(step)
-                setNeedsDisplay()
+                updateNeedleTarget()
             }
         }
     }
@@ -26,14 +31,48 @@ final class TachometerView: UIControl {
     /// Eingemessene Kennlinie der Lok. Zeiger und Anzeige folgen dann der Maßstabsgeschwindigkeit.
     var speedCurve: SpeedCurve? { didSet { setNeedsDisplay() } }
     var forward: Bool = true { didSet { setNeedsDisplay() } }
-    var emergencyStop: Bool = false { didSet { setNeedsDisplay() } }
+    var emergencyStop: Bool = false {
+        didSet {
+            // Bei Nothalt steht die Lok sofort, der Zeiger fällt ohne Gleiten zurück
+            if emergencyStop && !oldValue { snapNeedle() }
+            setNeedsDisplay()
+        }
+    }
     /// Schaltet das Instrument bei fehlender Lok/Verbindung grau
     var isActive: Bool = true { didSet { setNeedsDisplay() } }
+
+    /// Zeiger gleitet gleichmäßig zur Fahrstufe, keine Bedienung per Touch
+    var smoothNeedle: Bool = false {
+        didSet {
+            guard oldValue != smoothNeedle else { return }
+            if !smoothNeedle { snapNeedle() }
+        }
+    }
+    /// Ungefähre Zeit in Sekunden, bis der gleitende Zeiger die neue Fahrstufe erreicht
+    var needleDelay: Double {
+        get { return damper.delay }
+        set { damper.delay = newValue }
+    }
 
     private let startAngle = CGFloat.pi * 0.75
     private let sweep = CGFloat.pi * 1.5
     private var lastAngle: CGFloat = 0
     private var accumulated: Double = 0
+
+    /// Angezeigte Zeigerstellung als Anteil der höchsten Fahrstufe (0…1)
+    private var damper = NeedleDamper(value: 0, delay: AppSettings.defaultTachoDelay)
+    private var displayLink: CADisplayLink?
+    private var lastFrameTime: CFTimeInterval = 0
+
+    /// Zifferblatt ohne Zeiger, wird nur bei Änderung von Größe, Skala oder Farbe neu gezeichnet
+    private var dialImage: UIImage?
+    private var dialImageKey: DialKey?
+
+    private struct DialKey: Equatable {
+        let size: CGSize
+        let scaleKmh: Double
+        let isActive: Bool
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -46,8 +85,69 @@ final class TachometerView: UIControl {
         fatalError("init(coder:) not supported")
     }
 
+    deinit {
+        displayLink?.invalidate()
+    }
+
     private var dialCenter: CGPoint { return CGPoint(x: bounds.midX, y: bounds.midY) }
     private var radius: CGFloat { return min(bounds.width, bounds.height) / 2 - 1 }
+
+    // MARK: Zeigerbewegung
+
+    private var targetFraction: Double {
+        return maxStep > 0 ? Double(max(0, min(step, maxStep))) / Double(maxStep) : 0
+    }
+
+    /// Zeiger ohne Gleiten auf die aktuelle Fahrstufe stellen (z.B. beim Lokwechsel)
+    func snapNeedle() {
+        damper.jump(to: targetFraction)
+        stopDisplayLink()
+        setNeedsDisplay()
+    }
+
+    private func updateNeedleTarget() {
+        guard smoothNeedle else {
+            snapNeedle()
+            return
+        }
+        damper.target = targetFraction
+        if damper.isSettled {
+            stopDisplayLink()
+        } else {
+            startDisplayLink()
+        }
+        setNeedsDisplay()
+    }
+
+    private func startDisplayLink() {
+        guard displayLink == nil, window != nil else { return }
+        let link = CADisplayLink(target: DisplayLinkProxy(self), selector: #selector(DisplayLinkProxy.tick(_:)))
+        lastFrameTime = 0
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    private func stopDisplayLink() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    fileprivate func displayLinkFired(_ link: CADisplayLink) {
+        let dt = lastFrameTime > 0 ? link.timestamp - lastFrameTime : link.duration
+        lastFrameTime = link.timestamp
+        damper.advance(by: min(max(dt, 0), 0.1))
+        if damper.isSettled { stopDisplayLink() }
+        setNeedsDisplay()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            stopDisplayLink()
+        } else if !damper.isSettled {
+            startDisplayLink()
+        }
+    }
 
     // MARK: Bedienung
 
@@ -56,7 +156,7 @@ final class TachometerView: UIControl {
     }
 
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        guard isEnabled else { return false }
+        guard isEnabled, !smoothNeedle else { return false }
         let p = touch.location(in: self)
         let dist = hypot(p.x - dialCenter.x, p.y - dialCenter.y)
         guard dist <= radius * 1.05 else { return false }
@@ -66,6 +166,8 @@ final class TachometerView: UIControl {
     }
 
     override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        // Während einer Drehung auf Anzeige umgeschaltet: Bedienung beenden
+        guard !smoothNeedle else { return false }
         let p = touch.location(in: self)
         let dist = hypot(p.x - dialCenter.x, p.y - dialCenter.y)
         let a = angle(of: p)
@@ -126,9 +228,9 @@ final class TachometerView: UIControl {
         return (24, 8)
     }
 
-    /// Endwert der Skala und aktuelle Geschwindigkeit in km/h
+    /// Endwert der Skala und angezeigte Geschwindigkeit in km/h
     private func speedValues() -> (scale: Double, current: Double) {
-        let stepFraction = maxStep > 0 ? Double(step) / Double(maxStep) : 0
+        let stepFraction = max(0, min(1, damper.value))
         if let curve = speedCurve, curve.hasMeasurements {
             return (Double(curve.scaleMax), curve.kmh(atFraction: stepFraction))
         }
@@ -154,16 +256,75 @@ final class TachometerView: UIControl {
         let r = radius
         let ringGray = Theme.rgb(0x494949)
 
-        // Schwarze Außenkante, flacher grauer Ring, schwarzes Zifferblatt
-        fillCircle(radius: r, color: .black)
-        fillCircle(radius: r * 0.988, color: ringGray)
-        fillCircle(radius: r * 0.886, color: .black)
-
         let speeds = speedValues()
         let scaleKmh = speeds.scale
         let fraction = CGFloat(max(0, min(1, speeds.current / scaleKmh)))
         let valueAngle = startAngle + sweep * fraction
         let white = isActive ? UIColor.white : Theme.textDark
+
+        // Zifferblatt aus dem Zwischenspeicher, damit der gleitende Zeiger flüssig läuft
+        let key = DialKey(size: bounds.size, scaleKmh: scaleKmh, isActive: isActive)
+        if dialImage == nil || dialImageKey != key {
+            dialImage = UIGraphicsImageRenderer(bounds: bounds).image { _ in
+                drawDial(scaleKmh: scaleKmh, white: white)
+            }
+            dialImageKey = key
+        }
+        dialImage?.draw(in: bounds)
+
+        // Geschwindigkeit mittig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
+        let speedFont = Theme.font(r * 0.18, bold: true)
+        let speedAttrs: [NSAttributedString.Key: Any] = [.font: speedFont, .foregroundColor: white]
+        let speedText = "\(Int(speeds.current.rounded()))" as NSString
+        let speedSize = speedText.size(withAttributes: speedAttrs)
+        speedText.draw(at: CGPoint(x: c.x - speedSize.width / 2, y: c.y + r * 0.5 - speedSize.height / 2),
+                       withAttributes: speedAttrs)
+        let unitAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(r * 0.13, bold: true),
+                                                        .foregroundColor: emergencyStop ? Theme.red : white]
+        let unit = (emergencyStop ? "NOTHALT" : "km/h") as NSString
+        let unitSize = unit.size(withAttributes: unitAttrs)
+        unit.draw(at: CGPoint(x: c.x - unitSize.width / 2, y: c.y + r * 0.7 - unitSize.height / 2),
+                  withAttributes: unitAttrs)
+
+        // Gelber Zeiger: gerader Schaft mit dunkler Mittellinie, spitz auslaufend
+        let halfW = r * 0.047
+        let shoulder = r * 0.49
+        let tipR = r * 0.68
+        // Punkt auf dem Zeiger: `along` vom Mittelpunkt aus, `side` quer dazu
+        func needlePoint(_ along: CGFloat, _ side: CGFloat) -> CGPoint {
+            return CGPoint(x: c.x + cos(valueAngle) * along - sin(valueAngle) * side,
+                           y: c.y + sin(valueAngle) * along + cos(valueAngle) * side)
+        }
+        let needle = UIBezierPath()
+        needle.move(to: needlePoint(0, halfW))
+        needle.addLine(to: needlePoint(shoulder, halfW))
+        needle.addLine(to: needlePoint(tipR, 0))
+        needle.addLine(to: needlePoint(shoulder, -halfW))
+        needle.addLine(to: needlePoint(0, -halfW))
+        needle.close()
+        let needleColor = isActive ? (emergencyStop ? Theme.red : Theme.rgb(0xFFDC00)) : Theme.textDark
+        needleColor.setFill()
+        needle.fill()
+        let midLine = UIBezierPath()
+        midLine.move(to: point(at: valueAngle, radius: r * 0.12))
+        midLine.addLine(to: point(at: valueAngle, radius: shoulder * 0.97))
+        midLine.lineWidth = max(1, r * 0.016)
+        Theme.rgb(0x504A10).setStroke()
+        midLine.stroke()
+
+        // Flache graue Nabe
+        fillCircle(radius: r * 0.138, color: ringGray)
+    }
+
+    /// Ring, Teilstriche und Zahlen
+    private func drawDial(scaleKmh: Double, white: UIColor) {
+        let c = dialCenter
+        let r = radius
+
+        // Schwarze Außenkante, flacher grauer Ring, schwarzes Zifferblatt
+        fillCircle(radius: r, color: .black)
+        fillCircle(radius: r * 0.988, color: Theme.rgb(0x494949))
+        fillCircle(radius: r * 0.886, color: .black)
 
         // Teilstriche: alle auf einer Mittellinie, drei Längen
         let layout = TachometerView.scaleLayout(scaleKmh)
@@ -240,48 +401,22 @@ final class TachometerView: UIControl {
             }
             text.draw(at: CGPoint(x: tp.x - size.width / 2, y: tp.y - size.height / 2), withAttributes: labelAttrs)
         }
+    }
+}
 
-        // Geschwindigkeit mittig unter der Nabe, darunter km/h (bei Nothalt rot NOTHALT)
-        let speedFont = Theme.font(r * 0.18, bold: true)
-        let speedAttrs: [NSAttributedString.Key: Any] = [.font: speedFont, .foregroundColor: white]
-        let speedText = "\(Int(speeds.current.rounded()))" as NSString
-        let speedSize = speedText.size(withAttributes: speedAttrs)
-        speedText.draw(at: CGPoint(x: c.x - speedSize.width / 2, y: c.y + r * 0.5 - speedSize.height / 2),
-                       withAttributes: speedAttrs)
-        let unitAttrs: [NSAttributedString.Key: Any] = [.font: Theme.font(r * 0.13, bold: true),
-                                                        .foregroundColor: emergencyStop ? Theme.red : white]
-        let unit = (emergencyStop ? "NOTHALT" : "km/h") as NSString
-        let unitSize = unit.size(withAttributes: unitAttrs)
-        unit.draw(at: CGPoint(x: c.x - unitSize.width / 2, y: c.y + r * 0.7 - unitSize.height / 2),
-                  withAttributes: unitAttrs)
+/// CADisplayLink hält sein Ziel fest; der Umweg verhindert, dass der Tacho nie freigegeben wird
+private final class DisplayLinkProxy: NSObject {
+    private weak var tacho: TachometerView?
 
-        // Gelber Zeiger: gerader Schaft mit dunkler Mittellinie, spitz auslaufend
-        let halfW = r * 0.047
-        let shoulder = r * 0.49
-        let tipR = r * 0.68
-        // Punkt auf dem Zeiger: `along` vom Mittelpunkt aus, `side` quer dazu
-        func needlePoint(_ along: CGFloat, _ side: CGFloat) -> CGPoint {
-            return CGPoint(x: c.x + cos(valueAngle) * along - sin(valueAngle) * side,
-                           y: c.y + sin(valueAngle) * along + cos(valueAngle) * side)
+    init(_ tacho: TachometerView) {
+        self.tacho = tacho
+    }
+
+    @objc func tick(_ link: CADisplayLink) {
+        guard let tacho = tacho else {
+            link.invalidate()
+            return
         }
-        let needle = UIBezierPath()
-        needle.move(to: needlePoint(0, halfW))
-        needle.addLine(to: needlePoint(shoulder, halfW))
-        needle.addLine(to: needlePoint(tipR, 0))
-        needle.addLine(to: needlePoint(shoulder, -halfW))
-        needle.addLine(to: needlePoint(0, -halfW))
-        needle.close()
-        let needleColor = isActive ? (emergencyStop ? Theme.red : Theme.rgb(0xFFDC00)) : Theme.textDark
-        needleColor.setFill()
-        needle.fill()
-        let midLine = UIBezierPath()
-        midLine.move(to: point(at: valueAngle, radius: r * 0.12))
-        midLine.addLine(to: point(at: valueAngle, radius: shoulder * 0.97))
-        midLine.lineWidth = max(1, r * 0.016)
-        Theme.rgb(0x504A10).setStroke()
-        midLine.stroke()
-
-        // Flache graue Nabe
-        fillCircle(radius: r * 0.138, color: ringGray)
+        tacho.displayLinkFired(link)
     }
 }
