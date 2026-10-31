@@ -69,6 +69,10 @@ struct Locomotive: Codable, Equatable {
     /// Dateiname des Lokbildes im Dokumentenordner
     var imageFile: String?
     var functions: [LocoFunction]
+    /// Gleitverzögerung der Tachonadel in Sekunden. Neue Loks übernehmen die Voreinstellung aus
+    /// *System → Einstellungen*; optional, damit ältere Lokdateien weiter geladen werden
+    /// (ohne Wert gilt die Voreinstellung).
+    var tachoDelay: Double?
 
     init(name: String, address: UInt16, speedSteps: SpeedSteps = .steps128) {
         self.id = UUID().uuidString
@@ -78,6 +82,13 @@ struct Locomotive: Codable, Equatable {
         self.maxSpeedKmh = 120
         self.imageFile = nil
         self.functions = Locomotive.defaultFunctions()
+        self.tachoDelay = AppSettings.shared.tachoDelay
+    }
+
+    /// Gleitverzögerung, mit der der Tacho dieser Lok arbeitet
+    var effectiveTachoDelay: Double {
+        guard let d = tachoDelay, d > 0 else { return AppSettings.shared.tachoDelay }
+        return AppSettings.clampedTachoDelay(d)
     }
 
     static func defaultFunctions() -> [LocoFunction] {

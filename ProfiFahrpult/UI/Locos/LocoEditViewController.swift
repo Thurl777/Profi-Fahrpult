@@ -1,6 +1,6 @@
 import UIKit
 
-/// Bearbeiten einer Lok: Name, Adresse, Fahrstufen, Bild und Funktionsbelegung
+/// Bearbeiten einer Lok: Name, Adresse, Fahrstufen, Geschwindigkeitsanzeige, Bild und Funktionsbelegung
 final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
                                     UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
@@ -13,6 +13,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     private let addressField = UITextField()
     private let vmaxField = UITextField()
     private let stepsControl = UISegmentedControl(items: ["14 FS", "28 FS", "128 FS"])
+    private let tachoDelaySlider = UISlider()
     private let previewImage = LocoImageView()
     private let controlCells = ControlCellCache()
 
@@ -62,6 +63,11 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         }
         stepsControl.tintColor = Theme.accent
         stepsControl.addTarget(self, action: #selector(stepsChanged), for: .valueChanged)
+        tachoDelaySlider.minimumValue = Float(AppSettings.tachoDelayRange.lowerBound)
+        tachoDelaySlider.maximumValue = Float(AppSettings.tachoDelayRange.upperBound)
+        tachoDelaySlider.value = Float(loco.effectiveTachoDelay)
+        tachoDelaySlider.minimumTrackTintColor = Theme.accent
+        tachoDelaySlider.addTarget(self, action: #selector(tachoDelayChanged), for: .valueChanged)
         previewImage.image = LocoStore.shared.image(for: loco)
     }
 
@@ -121,6 +127,22 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         updateVmaxField()
     }
 
+    /// Gleitverzögerung laut Regler, auf Zehntelsekunden gerundet
+    private var currentTachoDelay: Double {
+        return AppSettings.clampedTachoDelay((Double(tachoDelaySlider.value) * 10).rounded() / 10)
+    }
+
+    private var tachoDelayTitle: String {
+        return String(format: "Gleitverzögerung: %.1f s", currentTachoDelay)
+    }
+
+    @objc private func tachoDelayChanged() {
+        // Nur die Beschriftung ändern, die Zeile nicht neu laden: der Regler wird gerade bedient
+        if let cell = tableView.cellForRow(at: IndexPath(row: 2, section: Section.speed.rawValue)) {
+            cell.textLabel?.text = tachoDelayTitle
+        }
+    }
+
     // MARK: Speichern
 
     @objc private func cancel() {
@@ -152,6 +174,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         } else {
             loco.maxSpeedKmh = max(1, min(vmax, 999))
         }
+        loco.tachoDelay = currentTachoDelay
         if removeImage {
             loco.imageFile = nil
         }
@@ -174,7 +197,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
         case .general: return 3
-        case .speed: return 2
+        case .speed: return 3
         case .image: return 2
         case .functions: return Locomotive.functionCount
         case .actions: return isNew ? 0 : 1
@@ -197,9 +220,12 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
     }
 
     private var speedFooter: String {
-        return hasMeasurements
+        let curve = hasMeasurements
             ? "Der Tacho zeigt die eingemessene Maßstabsgeschwindigkeit. Zwischen den Messpunkten wird gerechnet."
             : "Ohne Messpunkte wird gleichmäßig von 0 bis zu diesem Wert gerechnet."
+        return curve + "\n\nGleitverzögerung: ungefähr die Zeit, bis die Tachonadel nach einer Änderung auf "
+            + "der neuen Geschwindigkeit steht (gilt bei „Tachonadel gleitend“ unter System → Einstellungen). "
+            + "Neue Loks übernehmen die Voreinstellung aus System → Einstellungen."
     }
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -230,6 +256,11 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         case .speed:
             if indexPath.row == 0 {
                 return fieldCell("km/h bei höchster Fahrstufe", vmaxField, width: 120)
+            }
+            if indexPath.row == 2 {
+                let cell = fieldCell(tachoDelayTitle, tachoDelaySlider, width: 220)
+                cell.textLabel?.text = tachoDelayTitle
+                return cell
             }
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             Theme.styleCell(cell)

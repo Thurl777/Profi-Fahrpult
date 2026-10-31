@@ -149,12 +149,16 @@ final class AppSettings {
         }
     }
 
-    /// Verzögerung der Tachonadel in Sekunden (ungefähr die Zeit bis zum Ziel)
+    static func clampedTachoDelay(_ d: Double) -> Double {
+        return min(max(d, tachoDelayRange.lowerBound), tachoDelayRange.upperBound)
+    }
+
+    /// Voreinstellung der Gleitverzögerung in Sekunden (ungefähr die Zeit bis zum Ziel).
+    /// Jede neu angelegte Lok übernimmt diesen Wert, danach wird er pro Lok eingestellt.
     var tachoDelay: Double {
         get {
             let d = defaults.double(forKey: Key.tachoDelay)
-            let range = AppSettings.tachoDelayRange
-            return d > 0 ? min(max(d, range.lowerBound), range.upperBound) : AppSettings.defaultTachoDelay
+            return d > 0 ? AppSettings.clampedTachoDelay(d) : AppSettings.defaultTachoDelay
         }
         set {
             defaults.set(newValue, forKey: Key.tachoDelay)

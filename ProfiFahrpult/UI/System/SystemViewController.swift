@@ -132,7 +132,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
     }
 
     private var tachoDelayTitle: String {
-        return String(format: "Verzögerung Tachonadel: %.1f s", settings.tachoDelay)
+        return String(format: "Gleitverzögerung für neue Loks: %.1f s", settings.tachoDelay)
     }
 
     private func connectTapped() {
@@ -207,7 +207,10 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
                 + "Tachonadel gleitend: Der Tacho zeigt die Geschwindigkeit nur noch an, die Nadel bewegt sich "
                 + "gleichmäßig zur neuen Fahrstufe und lässt sich nicht mehr drehen. Eingestellt wird mit dem "
                 + "Schieberegler oder – wenn er ausgeblendet ist – nur an der Multimaus. Langes Drücken auf den "
-                + "Tacho bleibt Nothalt der Lok. Die Verzögerung ist ungefähr die Zeit, bis die Nadel steht."
+                + "Tacho bleibt Nothalt der Lok. Die Verzögerung ist ungefähr die Zeit, bis die Nadel steht.\n\n"
+                + "Die Gleitverzögerung wird pro Lok unter Lokeinstellungen → Geschwindigkeitsanzeige eingestellt. "
+                + "Der Wert hier ist die Voreinstellung, mit der jede neu angelegte Lok beginnt; bereits "
+                + "eingestellte Loks behalten ihren Wert."
         }
         return nil
     }

@@ -200,9 +200,10 @@ final class ThrottleView: PanelView, Z21ClientObserver {
 
     /// Gleitende Tachonadel: der Tacho ist dann reine Anzeige, gefahren wird mit dem Schieberegler
     /// oder an der Multimaus. Langes Drücken auf den Tacho bleibt Nothalt.
+    /// Die Gleitverzögerung kommt aus den Einstellungen der Lok.
     private func applyTachoSettings() {
         tacho.smoothNeedle = AppSettings.shared.smoothTacho
-        tacho.needleDelay = AppSettings.shared.tachoDelay
+        tacho.needleDelay = loco?.effectiveTachoDelay ?? AppSettings.shared.tachoDelay
     }
 
     @objc private func tachoSettingsChanged() {
@@ -221,6 +222,7 @@ final class ThrottleView: PanelView, Z21ClientObserver {
         tacho.maxSpeedKmh = loco?.maxSpeedKmh ?? 120
         tacho.maxStep = maxStep
         tacho.speedCurve = loco?.speedCurve
+        applyTachoSettings()
         tacho.isActive = active
         tacho.isEnabled = active
         fader.maxStep = maxStep
