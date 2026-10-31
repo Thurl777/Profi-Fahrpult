@@ -6,8 +6,10 @@ import UIKit
 /// Zwei Betriebsarten:
 /// - Drehregler (`smoothNeedle = false`): eine kreisende Bewegung auf dem Instrument ändert die
 ///   Fahrstufe relativ, der Zeiger springt von Fahrstufe zu Fahrstufe.
-/// - Anzeige (`smoothNeedle = true`): der Zeiger gleitet mit `needleDelay` gleichmäßig zur Fahrstufe
-///   und lässt sich nicht per Touch drehen. Eingestellt wird am Schieberegler oder an der Multimaus.
+/// - Anzeige (`smoothNeedle = true`): der Zeiger bewegt sich wie die Geschwindigkeit einer Lok zur
+///   Fahrstufe (träge anfahren, Beschleunigung nach Zugkraftkennlinie, weich zum Stehen kommen;
+///   Stärke über `needleDelay`) und lässt sich nicht per Touch drehen. Eingestellt wird am
+///   Schieberegler oder an der Multimaus.
 final class TachometerView: UIControl {
 
     var maxStep: Int = 126 {
@@ -41,14 +43,15 @@ final class TachometerView: UIControl {
     /// Schaltet das Instrument bei fehlender Lok/Verbindung grau
     var isActive: Bool = true { didSet { setNeedsDisplay() } }
 
-    /// Zeiger gleitet gleichmäßig zur Fahrstufe, keine Bedienung per Touch
+    /// Zeiger gleitet wie eine beschleunigende Lok zur Fahrstufe, keine Bedienung per Touch
     var smoothNeedle: Bool = false {
         didSet {
             guard oldValue != smoothNeedle else { return }
             if !smoothNeedle { snapNeedle() }
         }
     }
-    /// Ungefähre Zeit in Sekunden, bis der gleitende Zeiger die neue Fahrstufe erreicht
+    /// Ungefähre Zeit in Sekunden für den vollen Ausschlag 0 → Höchstgeschwindigkeit;
+    /// kleinere Änderungen dauern entsprechend kürzer
     var needleDelay: Double {
         get { return damper.delay }
         set { damper.delay = newValue }

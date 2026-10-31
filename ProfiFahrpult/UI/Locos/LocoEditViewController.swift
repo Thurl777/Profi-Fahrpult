@@ -223,8 +223,9 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         let curve = hasMeasurements
             ? "Der Tacho zeigt die eingemessene Maßstabsgeschwindigkeit. Zwischen den Messpunkten wird gerechnet."
             : "Ohne Messpunkte wird gleichmäßig von 0 bis zu diesem Wert gerechnet."
-        return curve + "\n\nGleitverzögerung: ungefähr die Zeit, bis die Tachonadel nach einer Änderung auf "
-            + "der neuen Geschwindigkeit steht (gilt bei „Tachonadel gleitend“ unter System → Einstellungen). "
+        return curve + "\n\nGleitverzögerung: ungefähr die Zeit, die die Tachonadel von 0 bis zur "
+            + "Höchstgeschwindigkeit braucht – wie bei einer echten Lok dauern kleinere Änderungen kürzer "
+            + "(gilt bei „Tachonadel gleitend“ unter System → Einstellungen). "
             + "Neue Loks übernehmen die Voreinstellung aus System → Einstellungen."
     }
 

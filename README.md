@@ -32,9 +32,14 @@ die blaue Tastenleiste mit ⇄ (Regler tauschen), Schraubenschlüssel (Lokeinste
 
 ## Tacho und Schieberegler
 
-- **Der Tacho zeigt die Geschwindigkeit an.** Die gelbe Nadel gleitet gleichmäßig zur neuen
-  Fahrstufe, statt von Stufe zu Stufe zu springen – egal ob die Änderung aus der App oder von
-  einer Multimaus kommt. Die Zahl unter der Nabe läuft mit.
+- **Der Tacho zeigt die Geschwindigkeit an.** Die gelbe Nadel gleitet zur neuen Fahrstufe, statt
+  von Stufe zu Stufe zu springen – egal ob die Änderung aus der App oder von einer Multimaus kommt.
+  Die Zahl unter der Nabe läuft mit.
+- **Die Nadel bewegt sich wie eine Lok:** Sie fährt träge an (die Beschleunigung baut sich erst auf),
+  beschleunigt bis zur halben Höchstgeschwindigkeit gleichmäßig und darüber langsamer
+  (Leistungsgrenze, wie bei der Zugkraftkennlinie einer echten Lok), bremst gleichmäßig und kommt
+  weich zum Stehen, ohne überzuschwingen. Die Dauer hängt von der Größe der Änderung ab:
+  0 auf 60 km/h dauert etwa halb so lange wie 0 auf 120 km/h.
 - **Mit dem Schieberegler wird die Geschwindigkeit eingestellt.** Er springt sofort auf die gewählte
   Fahrstufe und sendet sie an die Z21; der Tacho folgt mit der eingestellten Verzögerung.
 - In diesem Modus lässt sich die Tachonadel **nicht per Touch drehen**. Langes Drücken auf den Tacho
@@ -49,8 +54,8 @@ die blaue Tastenleiste mit ⇄ (Regler tauschen), Schraubenschlüssel (Lokeinste
     Bereits eingestellte Loks behalten ihren Wert.
   - **Schieberegler neben Tacho anzeigen** – ein / aus.
 - **Gleitverzögerung pro Lok** unter *Loks → Bearbeiten → Geschwindigkeitsanzeige* (oder über den
-  Schraubenschlüssel im Fahrregler): 0,2 bis 20 s, ungefähr die Zeit, bis die Nadel nach einer
-  Änderung auf der neuen Geschwindigkeit steht. So kann z. B. eine schwere Güterzuglok träger
+  Schraubenschlüssel im Fahrregler): 0,2 bis 20 s, ungefähr die Zeit, die die Nadel von 0 bis zur
+  Höchstgeschwindigkeit braucht; kleinere Änderungen dauern entsprechend kürzer. So kann z. B. eine schwere Güterzuglok träger
   anzeigen als ein Triebwagen. Loks aus älteren Lokdateien ohne eigenen Wert folgen der Voreinstellung,
   bis sie einmal gespeichert werden.
 - Beim Lokwechsel steht die Nadel sofort auf der Geschwindigkeit der neuen Lok.

@@ -69,7 +69,8 @@ struct Locomotive: Codable, Equatable {
     /// Dateiname des Lokbildes im Dokumentenordner
     var imageFile: String?
     var functions: [LocoFunction]
-    /// Gleitverzögerung der Tachonadel in Sekunden. Neue Loks übernehmen die Voreinstellung aus
+    /// Gleitverzögerung der Tachonadel: ungefähre Zeit in Sekunden für den vollen Ausschlag
+    /// 0 → Höchstgeschwindigkeit. Neue Loks übernehmen die Voreinstellung aus
     /// *System → Einstellungen*; optional, damit ältere Lokdateien weiter geladen werden
     /// (ohne Wert gilt die Voreinstellung).
     var tachoDelay: Double?

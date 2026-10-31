@@ -154,8 +154,8 @@ final class AppSettings {
         return Float(f.squareRoot())
     }
 
-    /// Tacho als reine Anzeige: Die Nadel gleitet gleichmäßig zur Fahrstufe und lässt sich nicht
-    /// per Touch drehen. Eingestellt wird mit dem Schieberegler (oder an der Multimaus).
+    /// Tacho als reine Anzeige: Die Nadel gleitet wie die Geschwindigkeit einer Lok zur Fahrstufe und
+    /// lässt sich nicht per Touch drehen. Eingestellt wird mit dem Schieberegler (oder an der Multimaus).
     var smoothTacho: Bool {
         get { return defaults.bool(forKey: Key.smoothTacho) }
         set {
@@ -168,7 +168,9 @@ final class AppSettings {
         return min(max(d, tachoDelayRange.lowerBound), tachoDelayRange.upperBound)
     }
 
-    /// Voreinstellung der Gleitverzögerung in Sekunden (ungefähr die Zeit bis zum Ziel).
+    /// Voreinstellung der Gleitverzögerung: ungefähre Zeit in Sekunden für den vollen Ausschlag von 0
+    /// bis zur Höchstgeschwindigkeit. Die Nadel bewegt sich damit mit einer festen Beschleunigung,
+    /// kleinere Änderungen dauern kürzer (siehe `NeedleDamper`).
     /// Jede neu angelegte Lok übernimmt diesen Wert, danach wird er pro Lok eingestellt.
     var tachoDelay: Double {
         get {
