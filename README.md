@@ -126,8 +126,10 @@ python3 tools/multimaus.py 23 f 0 an
 - Nur iPad (Hoch- und Querformat).
 - Reines UIKit ohne SwiftUI, ohne SF Symbols und ohne Network.framework (UDP über BSD-Sockets).
   Dadurch läuft der Code auch auf älteren iOS-Versionen.
-- Im Projekt ist **iOS 12.0** als Mindestversion eingestellt. Das ist das Minimum, das aktuelle
-  Xcode-Versionen zulassen; damit laufen u. a. iPad Air 1, iPad mini 2/3 und alle neueren iPads.
+- Im Projekt ist **iOS 12.2** als Mindestversion eingestellt; damit laufen u. a. iPad Air 1,
+  iPad mini 2/3 (die bekommen iOS 12.5) und alle neueren iPads. Ab iOS 12.2 ist die Swift-Laufzeit
+  Teil des Systems, die App muss sie also nicht mitbringen – die `.ipa` wird kleiner und enthält
+  keine `libswift*.dylib` mehr (Geräte mit iOS 12.0/12.1 vorher auf 12.5 aktualisieren).
 - Für noch ältere Geräte (iOS 9–11, z. B. iPad 4 oder iPad mini 1) kann man mit einem älteren
   Xcode (12 oder 13) unter *Target → General → Minimum Deployments* einen kleineren Wert einstellen.
   Der Code prüft neuere Schnittstellen mit `#available`.
@@ -162,7 +164,11 @@ die fertige App dann von einem Windows-PC aus aufs iPad bringen:
 4. Wie beim direkten Xcode-Weg läuft die App mit einer kostenlosen Apple-ID nur 7 Tage;
    danach einfach dieselbe `.ipa` erneut über Sideloadly installieren (ein neuer Cloud-Build
    ist nur nötig, wenn sich der Code geändert hat).
-5. Beim ersten Start auf dem iPad den Zugriff auf das **lokale Netzwerk** erlauben.
+5. Meldet Sideloadly *„This does not look like a valid iOS app“* mit *„decode io: deflate“*, ist
+   meist der Download oder das Entpacken beschädigt: Artefakt neu herunterladen, vollständig
+   entpacken (Rechtsklick → *Alle extrahieren* oder 7-Zip) und die entpackte `.ipa` verwenden.
+   Der Workflow prüft die `.ipa` vor dem Hochladen selbst auf Beschädigung.
+6. Beim ersten Start auf dem iPad den Zugriff auf das **lokale Netzwerk** erlauben.
 
 ## Verbindung zur Z21
 
