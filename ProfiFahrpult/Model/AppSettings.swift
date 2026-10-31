@@ -28,6 +28,8 @@ final class AppSettings {
         static let measureDistance = "measure.distanceCm"
         static let followHandhelds = "ui.followHandhelds"
         static let showThrottleFader = "ui.showThrottleFader"
+        static let smoothTacho = "ui.smoothTacho"
+        static let tachoDelay = "ui.tachoDelay"
         static let contactAddressLeft = "measure.contact.left"
         static let contactAddressMiddle = "measure.contact.middle"
         static let contactAddressRight = "measure.contact.right"
@@ -49,6 +51,8 @@ final class AppSettings {
             Key.measureDistance: 100.0,
             Key.followHandhelds: true,
             Key.showThrottleFader: true,
+            Key.smoothTacho: true,
+            Key.tachoDelay: AppSettings.defaultTachoDelay,
             Key.contactAddressLeft: 0,
             Key.contactAddressMiddle: 0,
             Key.contactAddressRight: 0,
@@ -129,6 +133,53 @@ final class AppSettings {
         set {
             defaults.set(newValue, forKey: Key.showThrottleFader)
             NotificationCenter.default.post(name: .throttleFaderVisibilityChanged, object: self)
+        }
+    }
+
+    static let defaultTachoDelay = 1.0
+    static let tachoDelayRange: ClosedRange<Double> = 0.2...20
+
+    /// Regler für die Gleitverzögerung (Stellung 0…1): quadratisch, damit kurze Zeiten im unteren
+    /// Bereich fein einstellbar bleiben und trotzdem bis 20 s gehen. Gerundet auf Zehntelsekunden.
+    static func tachoDelay(sliderPosition p: Float) -> Double {
+        let pos = Double(min(max(p, 0), 1))
+        let range = tachoDelayRange
+        let d = range.lowerBound + (range.upperBound - range.lowerBound) * pos * pos
+        return clampedTachoDelay((d * 10).rounded() / 10)
+    }
+
+    static func sliderPosition(tachoDelay d: Double) -> Float {
+        let range = tachoDelayRange
+        let f = (clampedTachoDelay(d) - range.lowerBound) / (range.upperBound - range.lowerBound)
+        return Float(f.squareRoot())
+    }
+
+    /// Tacho als reine Anzeige: Die Nadel gleitet wie die Geschwindigkeit einer Lok zur Fahrstufe und
+    /// lässt sich nicht per Touch drehen. Eingestellt wird mit dem Schieberegler (oder an der Multimaus).
+    var smoothTacho: Bool {
+        get { return defaults.bool(forKey: Key.smoothTacho) }
+        set {
+            defaults.set(newValue, forKey: Key.smoothTacho)
+            NotificationCenter.default.post(name: .tachoSettingsChanged, object: self)
+        }
+    }
+
+    static func clampedTachoDelay(_ d: Double) -> Double {
+        return min(max(d, tachoDelayRange.lowerBound), tachoDelayRange.upperBound)
+    }
+
+    /// Voreinstellung der Gleitverzögerung: ungefähre Zeit in Sekunden für den vollen Ausschlag von 0
+    /// bis zur Höchstgeschwindigkeit. Die Nadel bewegt sich damit mit einer festen Beschleunigung,
+    /// kleinere Änderungen dauern kürzer (siehe `NeedleDamper`).
+    /// Jede neu angelegte Lok übernimmt diesen Wert, danach wird er pro Lok eingestellt.
+    var tachoDelay: Double {
+        get {
+            let d = defaults.double(forKey: Key.tachoDelay)
+            return d > 0 ? AppSettings.clampedTachoDelay(d) : AppSettings.defaultTachoDelay
+        }
+        set {
+            defaults.set(newValue, forKey: Key.tachoDelay)
+            NotificationCenter.default.post(name: .tachoSettingsChanged, object: self)
         }
     }
 

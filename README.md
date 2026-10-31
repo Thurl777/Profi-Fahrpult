@@ -2,7 +2,7 @@
 
 iPad-App zur Steuerung einer Modelleisenbahn über die **Roco/Fleischmann Z21** (auch z21, z21start, Z21 XL).
 Die Funktionen orientieren sich an der Z21-App von Roco. Die Oberfläche ist an die
-**ESU ECoS** angelehnt: dunkle Bedienoberfläche, zwei Fahrregler mit Tacho-Drehregler,
+**ESU ECoS** angelehnt: dunkle Bedienoberfläche, zwei Fahrregler mit Tacho und Schieberegler,
 gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 
 > Ein unabhängiges Hobbyprojekt. Es verwendet das öffentlich dokumentierte
@@ -12,7 +12,7 @@ gelb leuchtende Funktionstasten, rote STOP- und grüne GO-Taste.
 
 | Bereich | Inhalt |
 |---|---|
-| **Fahren** | 2 Fahrregler nebeneinander, Tacho als Drehregler (kreisende Bewegung, lange drücken = Nothalt der Lok), optionaler Schieberegler an der Außenseite jedes Reglers, Richtung, Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, Lokeinstellungen direkt aus dem Fahrregler, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“, Kopplung mit zwei Multimäusen (siehe unten) |
+| **Fahren** | 2 Fahrregler nebeneinander, Tacho zur Geschwindigkeitsanzeige mit gleitender Nadel (lange drücken = Nothalt der Lok), Schieberegler zum Einstellen der Geschwindigkeit an der Außenseite jedes Reglers, Richtung, Funktionen F0–F31 auf 3 Seiten, Moment- und Dauerfunktionen, Lokeinstellungen direkt aus dem Fahrregler, RailCom-Geschwindigkeit, Hinweis „wird von anderem Gerät gesteuert“, Kopplung mit zwei Multimäusen (siehe unten) |
 | **Loks** | Lokliste mit Name, Adresse (1–9999), 14/28/128 Fahrstufen, Geschwindigkeitsanzeige (km/h bei höchster Fahrstufe oder eingemessene Messpunkte), Einmessen mit drei Belegtmeldern (einzeln oder automatisch), Lokfoto (Mediathek/Kamera), Funktionsbelegung mit 19 Symbolen |
 | **Stellpult** | 16 Magnetartikel pro Seite, Adressen 1–2048, rote/grüne Taste, Weichen links/rechts, Signale, Entkuppler, Licht; Rückmeldung der Stellung; Name und Rot/Grün-Tausch per langem Drücken |
 | **Melder** | R-Bus-Rückmelder, Module 1–20 mit je 8 Eingängen, Live-Anzeige |
@@ -29,6 +29,36 @@ gelbem Zeiger, beim linken Regler links und beim rechten Regler rechts ein Schie
 die blaue Tastenleiste mit ⇄ (Regler tauschen), Schraubenschlüssel (Lokeinstellungen) und den Funktionsseiten.
 
 ![Querformat](docs/mockup/querformat.png)
+
+## Tacho und Schieberegler
+
+- **Der Tacho zeigt die Geschwindigkeit an.** Die gelbe Nadel gleitet zur neuen Fahrstufe, statt
+  von Stufe zu Stufe zu springen – egal ob die Änderung aus der App oder von einer Multimaus kommt.
+  Die Zahl unter der Nabe läuft mit.
+- **Die Nadel bewegt sich wie eine Lok:** Sie fährt träge an (die Beschleunigung baut sich erst auf),
+  beschleunigt bis zur halben Höchstgeschwindigkeit gleichmäßig und darüber langsamer
+  (Leistungsgrenze, wie bei der Zugkraftkennlinie einer echten Lok), bremst gleichmäßig und kommt
+  weich zum Stehen, ohne überzuschwingen. Die Dauer hängt von der Größe der Änderung ab:
+  0 auf 60 km/h dauert etwa halb so lange wie 0 auf 120 km/h.
+- **Mit dem Schieberegler wird die Geschwindigkeit eingestellt.** Er springt sofort auf die gewählte
+  Fahrstufe und sendet sie an die Z21; der Tacho folgt mit der eingestellten Verzögerung.
+- In diesem Modus lässt sich die Tachonadel **nicht per Touch drehen**. Langes Drücken auf den Tacho
+  bleibt der Nothalt der Lok; dabei fällt die Nadel ohne Verzögerung auf 0.
+- Der Modus funktioniert auch **ohne eingeblendeten Schieberegler**. Dann ist der Tacho reine Anzeige
+  und die Geschwindigkeit lässt sich nur an der Multimaus (oder einem anderen Handregler) einstellen.
+- Einstellungen unter *System → Einstellungen*:
+  - **Tachonadel gleitend (nur Anzeige)** – ein (Standard) / aus. Aus = früheres Verhalten:
+    Tacho als Drehregler (kreisende Bewegung ändert die Fahrstufe), Nadel springt von Stufe zu Stufe.
+  - **Gleitverzögerung für neue Loks** – Voreinstellung 0,2 bis 20 s (Standard 1 s). Jede neu
+    angelegte Lok (auch automatisch über die Multimaus übernommene) beginnt mit diesem Wert.
+    Bereits eingestellte Loks behalten ihren Wert.
+  - **Schieberegler neben Tacho anzeigen** – ein / aus.
+- **Gleitverzögerung pro Lok** unter *Loks → Bearbeiten → Geschwindigkeitsanzeige* (oder über den
+  Schraubenschlüssel im Fahrregler): 0,2 bis 20 s, ungefähr die Zeit, die die Nadel von 0 bis zur
+  Höchstgeschwindigkeit braucht; kleinere Änderungen dauern entsprechend kürzer. So kann z. B. eine schwere Güterzuglok träger
+  anzeigen als ein Triebwagen. Loks aus älteren Lokdateien ohne eigenen Wert folgen der Voreinstellung,
+  bis sie einmal gespeichert werden.
+- Beim Lokwechsel steht die Nadel sofort auf der Geschwindigkeit der neuen Lok.
 
 ## Loks einmessen
 
@@ -64,8 +94,8 @@ Rechnung: km/h = Strecke (m) ÷ Zeit (s) × 3,6 × Maßstab. Beispiel H0: 1 m in
 Das iPad liegt in der Mitte, links und rechts je eine Roco Multimaus an der Z21.
 Regler 1 und Regler 2 der App zeigen, was an den Mäusen passiert:
 
-- **Tempo, Richtung, Funktionen:** Ändert man sie an der Multimaus, bewegt sich der Tacho
-  und die Funktionstasten leuchten in der App mit. Unter dem Loknamen steht kurz „Handregler aktiv“.
+- **Tempo, Richtung, Funktionen:** Ändert man sie an der Multimaus, bewegen sich Tacho und
+  Schieberegler und die Funktionstasten leuchten in der App mit. Unter dem Loknamen steht kurz „Handregler aktiv“.
   Umgekehrt sieht die Multimaus Änderungen aus der App.
 - **Lokwechsel:** Wählt man an einer Multimaus eine andere Lok und **fährt sie an oder schaltet eine
   Funktion**, übernimmt die App die Lok auf den Regler, der am längsten nicht benutzt wurde – in der
@@ -96,8 +126,10 @@ python3 tools/multimaus.py 23 f 0 an
 - Nur iPad (Hoch- und Querformat).
 - Reines UIKit ohne SwiftUI, ohne SF Symbols und ohne Network.framework (UDP über BSD-Sockets).
   Dadurch läuft der Code auch auf älteren iOS-Versionen.
-- Im Projekt ist **iOS 12.0** als Mindestversion eingestellt. Das ist das Minimum, das aktuelle
-  Xcode-Versionen zulassen; damit laufen u. a. iPad Air 1, iPad mini 2/3 und alle neueren iPads.
+- Im Projekt ist **iOS 12.2** als Mindestversion eingestellt; damit laufen u. a. iPad Air 1,
+  iPad mini 2/3 (die bekommen iOS 12.5) und alle neueren iPads. Ab iOS 12.2 ist die Swift-Laufzeit
+  Teil des Systems, die App muss sie also nicht mitbringen – die `.ipa` wird kleiner und enthält
+  keine `libswift*.dylib` mehr (Geräte mit iOS 12.0/12.1 vorher auf 12.5 aktualisieren).
 - Für noch ältere Geräte (iOS 9–11, z. B. iPad 4 oder iPad mini 1) kann man mit einem älteren
   Xcode (12 oder 13) unter *Target → General → Minimum Deployments* einen kleineren Wert einstellen.
   Der Code prüft neuere Schnittstellen mit `#available`.
@@ -132,7 +164,11 @@ die fertige App dann von einem Windows-PC aus aufs iPad bringen:
 4. Wie beim direkten Xcode-Weg läuft die App mit einer kostenlosen Apple-ID nur 7 Tage;
    danach einfach dieselbe `.ipa` erneut über Sideloadly installieren (ein neuer Cloud-Build
    ist nur nötig, wenn sich der Code geändert hat).
-5. Beim ersten Start auf dem iPad den Zugriff auf das **lokale Netzwerk** erlauben.
+5. Meldet Sideloadly *„This does not look like a valid iOS app“* mit *„decode io: deflate“*, ist
+   meist der Download oder das Entpacken beschädigt: Artefakt neu herunterladen, vollständig
+   entpacken (Rechtsklick → *Alle extrahieren* oder 7-Zip) und die entpackte `.ipa` verwenden.
+   Der Workflow prüft die `.ipa` vor dem Hochladen selbst auf Beschädigung.
+6. Beim ersten Start auf dem iPad den Zugriff auf das **lokale Netzwerk** erlauben.
 
 ## Verbindung zur Z21
 
@@ -160,7 +196,7 @@ R-Bus-Melder zufällig wechseln. `tools/multimaus.py` spielt einen Handregler (s
 ProfiFahrpult/
   App/          AppDelegate, Info.plist, Startbildschirm
   Z21/          Z21-LAN-Protokoll (Codec), UDP-Socket, Z21Client (Verbindung + Zustand)
-  Core/         Rechenlogik ohne UIKit (Geschwindigkeitskennlinie, Maßstäbe, Multimaus-Zuordnung)
+  Core/         Rechenlogik ohne UIKit (Geschwindigkeitskennlinie, Maßstäbe, Multimaus-Zuordnung, Tachonadel-Dämpfung)
   Model/        Lok, Lokliste, Magnetartikel, Einstellungen (JSON/UserDefaults)
   UI/           ECoS-Design (Theme), Tacho, Funktionssymbole, alle Bildschirme
 Tests/          Unit-Tests für Protokoll und Kennlinie + Integrationstest gegen den Simulator

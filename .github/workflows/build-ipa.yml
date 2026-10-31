@@ -35,7 +35,22 @@ jobs:
           cd ipa
           zip -r -y ../ProfiFahrpult.ipa Payload
 
+      - name: IPA prüfen
+        run: |
+          set -e
+          unzip -tq ProfiFahrpult.ipa
+          # Ab iOS 12.2 gehört die Swift-Laufzeit zum System und darf nicht mit in der App liegen
+          if unzip -l ProfiFahrpult.ipa | grep -q 'Frameworks/libswift'; then
+            echo "::warning::Swift-Laufzeit ist in die App eingebettet (Mindestversion prüfen)"
+          fi
+          ls -l ProfiFahrpult.ipa
+          shasum -a 256 ProfiFahrpult.ipa
+
       - uses: actions/upload-artifact@v4
         with:
           name: ProfiFahrpult-ipa
           path: ProfiFahrpult.ipa
+
+      - name: Unit-Tests (Protokoll und Rechenlogik)
+        # nach dem Upload, damit die IPA auch bei einem roten Test bereitsteht
+        run: swift test
