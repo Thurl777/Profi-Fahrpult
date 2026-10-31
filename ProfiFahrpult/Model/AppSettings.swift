@@ -137,7 +137,22 @@ final class AppSettings {
     }
 
     static let defaultTachoDelay = 1.0
-    static let tachoDelayRange: ClosedRange<Double> = 0.2...5
+    static let tachoDelayRange: ClosedRange<Double> = 0.2...20
+
+    /// Regler für die Gleitverzögerung (Stellung 0…1): quadratisch, damit kurze Zeiten im unteren
+    /// Bereich fein einstellbar bleiben und trotzdem bis 20 s gehen. Gerundet auf Zehntelsekunden.
+    static func tachoDelay(sliderPosition p: Float) -> Double {
+        let pos = Double(min(max(p, 0), 1))
+        let range = tachoDelayRange
+        let d = range.lowerBound + (range.upperBound - range.lowerBound) * pos * pos
+        return clampedTachoDelay((d * 10).rounded() / 10)
+    }
+
+    static func sliderPosition(tachoDelay d: Double) -> Float {
+        let range = tachoDelayRange
+        let f = (clampedTachoDelay(d) - range.lowerBound) / (range.upperBound - range.lowerBound)
+        return Float(f.squareRoot())
+    }
 
     /// Tacho als reine Anzeige: Die Nadel gleitet gleichmäßig zur Fahrstufe und lässt sich nicht
     /// per Touch drehen. Eingestellt wird mit dem Schieberegler (oder an der Multimaus).

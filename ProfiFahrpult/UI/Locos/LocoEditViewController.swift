@@ -63,9 +63,9 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
         }
         stepsControl.tintColor = Theme.accent
         stepsControl.addTarget(self, action: #selector(stepsChanged), for: .valueChanged)
-        tachoDelaySlider.minimumValue = Float(AppSettings.tachoDelayRange.lowerBound)
-        tachoDelaySlider.maximumValue = Float(AppSettings.tachoDelayRange.upperBound)
-        tachoDelaySlider.value = Float(loco.effectiveTachoDelay)
+        tachoDelaySlider.minimumValue = 0
+        tachoDelaySlider.maximumValue = 1
+        tachoDelaySlider.value = AppSettings.sliderPosition(tachoDelay: loco.effectiveTachoDelay)
         tachoDelaySlider.minimumTrackTintColor = Theme.accent
         tachoDelaySlider.addTarget(self, action: #selector(tachoDelayChanged), for: .valueChanged)
         previewImage.image = LocoStore.shared.image(for: loco)
@@ -129,7 +129,7 @@ final class LocoEditViewController: UITableViewController, UITextFieldDelegate,
 
     /// Gleitverzögerung laut Regler, auf Zehntelsekunden gerundet
     private var currentTachoDelay: Double {
-        return AppSettings.clampedTachoDelay((Double(tachoDelaySlider.value) * 10).rounded() / 10)
+        return AppSettings.tachoDelay(sliderPosition: tachoDelaySlider.value)
     }
 
     private var tachoDelayTitle: String {

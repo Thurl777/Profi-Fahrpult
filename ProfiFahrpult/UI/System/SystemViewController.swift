@@ -63,9 +63,9 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
         for s in [directionSwitch, screenSwitch, autoConnectSwitch, followSwitch, faderSwitch, smoothTachoSwitch] {
             s.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
         }
-        tachoDelaySlider.minimumValue = Float(AppSettings.tachoDelayRange.lowerBound)
-        tachoDelaySlider.maximumValue = Float(AppSettings.tachoDelayRange.upperBound)
-        tachoDelaySlider.value = Float(settings.tachoDelay)
+        tachoDelaySlider.minimumValue = 0
+        tachoDelaySlider.maximumValue = 1
+        tachoDelaySlider.value = AppSettings.sliderPosition(tachoDelay: settings.tachoDelay)
         tachoDelaySlider.minimumTrackTintColor = Theme.accent
         tachoDelaySlider.isEnabled = settings.smoothTacho
         tachoDelaySlider.addTarget(self, action: #selector(settingsChanged), for: .valueChanged)
@@ -108,8 +108,7 @@ final class SystemViewController: UITableViewController, UITextFieldDelegate, Z2
             settings.smoothTacho = smoothTachoSwitch.isOn
         }
         tachoDelaySlider.isEnabled = smoothTachoSwitch.isOn
-        // auf Zehntelsekunden runden
-        let delay = (Double(tachoDelaySlider.value) * 10).rounded() / 10
+        let delay = AppSettings.tachoDelay(sliderPosition: tachoDelaySlider.value)
         if settings.tachoDelay != delay {
             settings.tachoDelay = delay
         }

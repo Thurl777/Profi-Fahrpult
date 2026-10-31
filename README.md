@@ -44,12 +44,12 @@ die blaue Tastenleiste mit ⇄ (Regler tauschen), Schraubenschlüssel (Lokeinste
 - Einstellungen unter *System → Einstellungen*:
   - **Tachonadel gleitend (nur Anzeige)** – ein (Standard) / aus. Aus = früheres Verhalten:
     Tacho als Drehregler (kreisende Bewegung ändert die Fahrstufe), Nadel springt von Stufe zu Stufe.
-  - **Gleitverzögerung für neue Loks** – Voreinstellung 0,2 bis 5 s (Standard 1 s). Jede neu
+  - **Gleitverzögerung für neue Loks** – Voreinstellung 0,2 bis 20 s (Standard 1 s). Jede neu
     angelegte Lok (auch automatisch über die Multimaus übernommene) beginnt mit diesem Wert.
     Bereits eingestellte Loks behalten ihren Wert.
   - **Schieberegler neben Tacho anzeigen** – ein / aus.
 - **Gleitverzögerung pro Lok** unter *Loks → Bearbeiten → Geschwindigkeitsanzeige* (oder über den
-  Schraubenschlüssel im Fahrregler): 0,2 bis 5 s, ungefähr die Zeit, bis die Nadel nach einer
+  Schraubenschlüssel im Fahrregler): 0,2 bis 20 s, ungefähr die Zeit, bis die Nadel nach einer
   Änderung auf der neuen Geschwindigkeit steht. So kann z. B. eine schwere Güterzuglok träger
   anzeigen als ein Triebwagen. Loks aus älteren Lokdateien ohne eigenen Wert folgen der Voreinstellung,
   bis sie einmal gespeichert werden.
